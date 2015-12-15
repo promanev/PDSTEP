@@ -55,6 +55,69 @@ using namespace std;
 
 class RagDoll
 {
+#ifdef MALE
+	double avBH = 181.0;
+	double avBM = 78.4;
+	// body segments are calculated by the following formula
+	// y = b0 + b1 x BM + b2 x BH;
+
+	//MASSES:
+	double mass_head = -7.75 + 0.0586*avBM + 0.0497*avBH;
+	double mass_torso = 7.57 + 0.295*avBM - 0.0385*avBH; // upper + middle torso
+	double mass_pelvis = 13.1 + 0.162*avBM - 0.0873*avBH;
+	double mass_thigh = 1.18 + 0.182*avBM - 0.0259*avBH;
+	double mass_shank = -3.53 + 0.0306*avBM + 0.0268*avBH;
+	double mass_leg = -2.35 + 0.2126*avBM + 0.0009*avBH; // thigh + shank
+	double mass_foot = -2.25 + 0.0010*avBM + 0.0182*avBH;
+	double mass_UA = -0.896 + 0.0252*avBM + 0.0051*avBH; // upper arm separately
+	double mass_FA = -0.731 + 0.0047*avBM + 0.0084*avBH;  // forearm separately
+	double mass_arm = -1.627 + 0.0299*avBM + 0.0135*avBH; // UA+FA
+	double mass_hand = -0.325 - 0.0016*avBM + 0.0051*avBH; 
+
+	// HEIGHTS:
+	double height_head = 1.95 + 0.0535*avBM + 0.105*avBH;
+	double height_torso = -32.11 - 0.095*avBM + 0.462*avBH; // upper + middle torso
+	double height_pelvis = 26.4 + 0.0473*avBM - 0.0311*avBH;
+	double height_thigh = 4.26 - 0.0183*avBM + 0.24*avBH;
+	double height_shank = -16.0 + 0.0218*avBM + 0.321*avBH;
+	double height_leg = -11.74 + 0.0035*avBM + 0.561*avBH; // thigh + shank
+	double length_foot = 3.8 + 0.013*avBM + 0.119*avBH;
+	double height_UA = -15.0 + 0.012*avBM + 0.229*avBH; // upper arm separately
+	double height_FA = 0.143 - 0.0281*avBM + 0.161*avBH;  // forearm separately
+	double height_arm = -14.857 - 0.0161*avBM + 0.39*avBH; // UA+FA
+	double height_hand = -3.7 + 0.0036*avBM + 0.131*avBH;
+
+#else //Female:
+	double avBH = 169.0;
+	double avBM = 75.4;
+
+	//MASSES:
+	double mass_head = -2.95 + 0.0359*avBM + 0.0322*avBH;
+	double mass_torso = 24.05 + 0.3255*avBM - 0.1424*avBH; // upper + middle torso
+	double mass_pelvis = 1.1 + 0.104*avBM - 0.0027*avBH;
+	double mass_thigh = -10.9 + 0.213*avBM + 0.038*avBH;
+	double mass_shank = -0.563 + 0.0191*avBM + 0.0141*avBH;
+	double mass_leg = mass_thigh + mass_shank; // thigh + shank
+	double mass_foot = -1.27 + 0.0045*avBM + 0.0104*avBH;
+	double mass_UA = 3.05 + 0.0184*avBM - 0.0164*avBH; // upper arm separately
+	double mass_FA = -0.481 + 0.0087*avBM + 0.0043*avBH;  // forearm separately
+	double mass_arm = mass_UA + mass_FA; // UA+FA
+	double mass_hand = -1.13 + 0.0031*avBM + 0.0074*avBH;
+
+	// HEIGHTS:
+	double height_head = -8.95 - 0.0057*avBM + 0.202*avBH;
+	double height_torso = 10.48 + 0.1291*avBM + 0.147*avBH; // upper + middle torso
+	double height_pelvis = 21.4 + 0.0146*avBM - 0.005*avBH;
+	double height_thigh = -26.8 - 0.0725*avBM + 0.436*avBH;
+	double height_shank = -7.21 - 0.0618*avBM + 0.308*avBH;
+	double height_leg = height_thigh + height_shank; // thigh + shank
+	double length_foot = 7.39 + 0.0311*avBM + 0.0867*avBH;
+	double height_UA = 2.44 - 0.0169*avBM + 0.146*avBH; // upper arm separately
+	double height_FA = -8.57 + 0.0494*avBM + 0.18*avBH;  // forearm separately
+	double height_arm = height_FA + height_UA; // UA+FA
+	double height_hand = -8.96 + 0.0057*avBM + 0.163*avBH;
+#endif
+
 	// for the case of torso
 #ifdef TORSO
 		enum
@@ -165,16 +228,25 @@ public:
 
 		//in case of the torso
 #ifdef TORSO
-		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6, 0.15, 4., 100.);
-		CreateBox(BODYPART_ABDOMEN, 0., 4.5, 0., 0.5, 0.75, 0.5, 1.);
-		CreateBox(BODYPART_PELVIS, 0., 3.5, 0., 0.5, 0.5, 0.5, 1.);
-		CreateBox(BODYPART_LEFT_FOOT, 0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
-		CreateBox(BODYPART_RIGHT_FOOT, -0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
+		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6., 4., 0.15, 200.);
+		// mixed up dimensions: width, height, length, now corrected to that described: length, width, height
+		// width - mediolateral dir, length into the screen
+
+		//all heights are scaled down by 30, to be comparable with the previous robot. Also units can be thought of as feet
+		// since 1 foot = 30.4878 cm. Values are parsed divided by 60 because functions take in half-measures. 
+		//CreateBox(BODYPART_ABDOMEN, 0., 4.5, 0., 0.5, 0.75, 0.5, 1.);
+		//CreateBox(BODYPART_PELVIS, 0., 3.5, 0., 0.5, 0.5, 0.5, 1.);
+		//CreateBox(BODYPART_LEFT_FOOT, 0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
+		//CreateBox(BODYPART_RIGHT_FOOT, -0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
+		CreateBox(BODYPART_ABDOMEN, 0., 0.3+length_foot/60+height_leg/30+height_pelvis/60+height_torso/60, 0., height_pelvis/60, height_pelvis/60, height_torso/60, mass_torso);
+		CreateBox(BODYPART_PELVIS, 0., 0.3+length_foot/60+height_leg/30, 0., height_pelvis/60, height_pelvis/60, height_pelvis/60, mass_pelvis);
+		CreateBox(BODYPART_LEFT_FOOT, height_pelvis/60, 0.3+length_foot/120, 0., length_foot/ 60, length_foot/90, length_foot/120, mass_foot);
+		CreateBox(BODYPART_RIGHT_FOOT, -height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
 #else		
-		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6, 0.15, 4., 100.);
-		CreateBox(BODYPART_PELVIS, 0., 3.5, 0., 0.5, 0.5, 0.5, 1.);
-		CreateBox(BODYPART_LEFT_FOOT, 0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
-		CreateBox(BODYPART_RIGHT_FOOT, -0.5, 0.45, 0., 0.35, 0.15, 0.5, 1.);
+		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6., 4., 0.15, 200.);
+		CreateBox(BODYPART_PELVIS, 0., 0.3+length_foot/60+height_leg/30, 0., height_pelvis/60, height_pelvis/60, height_pelvis/60, mass_pelvis);
+		CreateBox(BODYPART_LEFT_FOOT, height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
+		CreateBox(BODYPART_RIGHT_FOOT, -height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
 #endif		
 
 		//FRICTION CTRL:
@@ -183,29 +255,40 @@ public:
 		//m_bodies[6]->setFriction(1.3);
 
 		//CREATE LEGS:
-		CreateCylinder(BODYPART_LEFT_LEG, Y_ORIENT, 0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
-		CreateCylinder(BODYPART_RIGHT_LEG, Y_ORIENT, -0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
+		//CreateCylinder(BODYPART_LEFT_LEG, Y_ORIENT, 0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
+		//CreateCylinder(BODYPART_RIGHT_LEG, Y_ORIENT, -0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
+		CreateCylinder(BODYPART_LEFT_LEG, Y_ORIENT, height_pelvis/60, 0.3+length_foot/60+height_leg/60, 0., height_leg/60, 0.15, 1., mass_leg);
+		CreateCylinder(BODYPART_RIGHT_LEG, Y_ORIENT, -height_pelvis/60, 0.3+length_foot/60+height_leg/60, 0., height_leg/60, 0.15, 1., mass_leg);
 
 		//CREATE JOINTS:
 		//vectors in argument are the joint location in local body part's coordinate system
 
 #ifdef TORSO
+		////Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
+		//Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		//Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		////Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
+		//Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		////28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
+		//Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		//Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0.25, -0.75, 0), btVector3(0.25, 0.5, 0), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0.25, -0.75, 0), btVector3(0.25, 0.5, 0), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 #else
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 #endif
 		return;
 	}
@@ -236,10 +319,11 @@ public:
 
 
 	// CREATE BOX:
-	void CreateBox(int index, double x, double y, double z, double length, double width, double height, btScalar mass)
+	void CreateBox(int index, double x, double y, double z, double length, double width, double height, double mass)
 	{
 		btVector3 positionOffset(0., 0., 0.);
-		m_shapes[index] = new btBoxShape(btVector3(length, width, height));
+		//m_shapes[index] = new btBoxShape(btVector3(length, width, height));
+		m_shapes[index] = new btBoxShape(btVector3(width, height, length));
 		btTransform offset; offset.setIdentity();
 		offset.setOrigin(positionOffset);
 
@@ -247,7 +331,7 @@ public:
 
 		transform.setIdentity();
 		transform.setOrigin(btVector3(btScalar(x), btScalar(y), btScalar(z)));
-		m_bodies[index] = localCreateRigidBody(mass, offset*transform, m_shapes[index]);
+		m_bodies[index] = localCreateRigidBody(btScalar(mass), offset*transform, m_shapes[index]);
 		m_bodies[index]->setDamping(0.05, 0.85);
 		//m_bodies[index]->setDeactivationTime(0.8);
 		//m_bodies[index]->setSleepingThresholds(1.6, 2.5);
@@ -258,7 +342,7 @@ public:
 
 
 	// CREATE CYLINDER:
-	void CreateCylinder(int index, legOrient orient, double x, double y, double z, double length, double width, double height, btScalar mass)
+	void CreateCylinder(int index, legOrient orient, double x, double y, double z, double length, double width, double height, double mass)
 	{
 		switch (orient)
 		{
@@ -272,7 +356,7 @@ public:
 
 		transform.setIdentity();
 		transform.setOrigin(btVector3(btScalar(x), btScalar(y), btScalar(z)));
-		m_bodies[index] = localCreateRigidBody(mass, offset*transform, m_shapes[index]);
+		m_bodies[index] = localCreateRigidBody(btScalar(mass), offset*transform, m_shapes[index]);
 		m_bodies[index]->setActivationState(DISABLE_DEACTIVATION);
 		m_bodies[index]->setDamping(0.05, 0.85);
 		//m_bodies[index]->setDeactivationTime(0.8);
@@ -289,7 +373,7 @@ public:
 
 		transform.setIdentity();
 		transform.setOrigin(btVector3(btScalar(x), btScalar(y), btScalar(z)));
-		m_bodies[index] = localCreateRigidBody(mass, offset*transform, m_shapes[index]);
+		m_bodies[index] = localCreateRigidBody(btScalar(mass), offset*transform, m_shapes[index]);
 		m_bodies[index]->setDamping(0.05, 0.85);
 		//m_bodies[index]->setDeactivationTime(0.8);
 		//m_bodies[index]->setSleepingThresholds(1.6, 2.5);
@@ -305,7 +389,7 @@ public:
 
 		transform.setIdentity();
 		transform.setOrigin(btVector3(btScalar(x), btScalar(y), btScalar(z)));
-		m_bodies[index] = localCreateRigidBody(mass, offset*transform, m_shapes[index]);
+		m_bodies[index] = localCreateRigidBody(btScalar(mass), offset*transform, m_shapes[index]);
 		m_bodies[index]->setDamping(0.05, 0.85);
 		//m_bodies[index]->setDeactivationTime(0.8);
 		//m_bodies[index]->setSleepingThresholds(1.6, 2.5);
@@ -600,7 +684,7 @@ void RagdollDemo::spawnRagdoll(const btVector3& startOffset)
 // define a const that will store the number of frames after which to display graphics.
 // Set > than simulation time to have no video at all 
 #ifdef TRAIN
-#define TICKS_PER_DISPLAY 100 // should be bigger than total ticks for the whole simulation
+#define TICKS_PER_DISPLAY 10000 // should be bigger than total ticks for the whole simulation
 #else
 #define TICKS_PER_DISPLAY 1
 #endif
