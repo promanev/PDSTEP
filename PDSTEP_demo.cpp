@@ -23,7 +23,10 @@ Written by: Marten Svanfeldt
 #include "GlutStuff.h"
 #include "GL_ShapeDrawer.h"
 
-// added
+// added for CTRNN
+#include <iomanip>
+
+// old added
 #include <iostream>
 #include <fstream>
 #include <vector>
@@ -274,21 +277,21 @@ public:
 		//Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0.25, -0.75, 0), btVector3(0.25, 0.5, 0), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
+		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
 #else
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
 #endif
 		return;
 	}
@@ -558,6 +561,40 @@ void load_data(const string& file_name, vector<vector<double> >& data) {
 	}
 	is.close();
 }
+//VERSION TO READ 2 weight matrices, not debugged
+//void load_data(const string& file_name, vector<vector<double> >& data1, vector<vector<double> >& data2, int num_input, int num_hidden)
+//{
+//	ifstream is(file_name, ios::in | ios::binary);
+//	if (!is.is_open()) {
+//		cout << "Failed open " << file_name << endl;
+//		return;
+//	}
+//	//cout << file_name << endl; // To debug which file is being read for input. 
+//	double i;
+//	int row = 0;
+//	string line;
+//	while (getline(is, line)) 
+//	{
+//		while (row < num_input)
+//		{
+//			stringstream ss(line);
+//			data1.push_back(vector<double>());
+//			while (ss >> i)
+//				data1.back().push_back(i);
+//			row++;
+//		}
+//
+//		while (row < num_hidden)
+//		{
+//			stringstream ss(line);
+//			data2.push_back(vector<double>());
+//			while (ss >> i)
+//				data2.back().push_back(i);
+//			row++;
+//		}
+//	}
+//	is.close();
+//}
 
 // hardcode the file name here:
 RagdollDemo::RagdollDemo() :m_inputFileName("weights.txt")
@@ -570,7 +607,147 @@ void RagdollDemo::initParams(const std::string& inputFileName)
 }
 // END READING WEIGHTS LOCALLY
 
+//CTRNN CODE:
+//========================================================================================================
 
+//These are the params: F(double tau, std::vector<double> y, double w, double bias, double input);
+typedef vector<double> F(double, vector<double>, vector<vector<double>>, vector<double>, vector<double>);
+
+// (update function, initial value, time1, time2, step size, time constant)
+vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<double> touches)
+{
+	//// Open file to record neuronal values at each time step
+	//std::ofstream fout("output.txt");
+	// Neuronal states vector is assigned initial values preset by user
+	/*vector<double> y = inputs;*/
+	//// Set column headers:
+	//std::cout << "Time step :: Values" << "\n";
+
+	//// Initialize 2D vector:
+	//vector<vector<double>> w;
+	//string file_name = "weights.txt";
+	//ifstream is(file_name, ios::in | ios::binary);
+	//if (!is.is_open()) {
+	//	cout << "Failed open " << file_name << endl;
+	//	return;
+	//}
+	////cout << file_name << endl; // To debug which file is being read for input. 
+	//double i;
+	//string line;
+	//while (getline(is, line)) {
+	//	stringstream ss(line);
+	//	w.push_back(vector<double>());
+	//	while (ss >> i)
+	//		w.back().push_back(i);
+	//}
+	//is.close();
+
+	//// intialize the weights array (WILL BE REPLACED WITH VALUES READ FROM FILE CREATED BY MATLAB):
+	//double wts_vals[3][3] =
+	//{
+	//	{ 0.0,-1.0,-1.0 },{ -1.0,0.0,-1.0 },{ -1.0,-1.0,0.0 }
+	//};
+
+
+
+	//// And push the array rows into the 2D vector:
+	//int array_rows = sizeof(wts_vals) / sizeof(wts_vals[0]);
+
+	//// Push vals from array to 2D vector row by row:
+	//for (int k = 0; k < array_rows; k++)
+	//{
+	//	std::vector<double> row_vals(wts_vals[k], wts_vals[k] + sizeof(wts_vals[k]) / sizeof(double));
+	//	w.push_back(row_vals);
+	//}
+	// Separate weight matrices:
+	vector<double> temp_row;
+	vector<vector<double>> wIJ, wJK;
+	wIJ.resize(num_input*num_hidden); wIJ.resize(num_hidden*num_output);
+	// populate the wIJ matrix
+	for (int i = 0; i < num_input; i++)
+	{
+		temp_row = w[i];
+		wIJ.push_back(temp_row);
+	}
+	//populate the wJK matrix
+	for (int i = 0; i < num_hidden; i++)
+	{
+		temp_row = w[i];
+		wJK.push_back(temp_row);
+	}
+	// Separate the array with neuronal values to layers to be processed separately:
+	vector<double> input = neuron_vals[0];
+	vector<double> hidden = neuron_vals[1];
+	vector<double> output = neuron_vals[2];
+	// Separate the array with bias values to layers to be processed separately:
+	vector<double> input_bias = bias[0];
+	vector<double> hidden_bias = bias[1];
+	vector<double> output_bias = bias[2];
+	// create zero array the size of input layer to substitute for non-existent previous layer, 
+	//can be modified to send feedbacks
+	vector<double> zeros = {0.,0.};
+	//create zero vectors to put for absent sensor values for hidden and output layers calculations:
+	vector<double> hidden_sensors; hidden_sensors.resize(num_hidden);
+	vector<double> output_sensors; output_sensors.resize(num_output);
+	//populate empty sensor vectors with zeros:
+	for (int i = 0; i < hidden_sensors.size(); i++) { hidden_sensors.at(i) = 0; }
+	for (int i = 0; i < output_sensors.size(); i++) { output_sensors.at(i) = 0; }
+	//Main cycle of neuronal values calculation
+	// Updates all neuronal values for allotted time "neural step" using step size "h": 
+	for (double t = 0; t < neural_step; t += h)
+	{
+		//std::cout << std::fixed << std::setprecision(3) << t;
+		//fout << std::fixed << std::setprecision(3) << t;
+
+		//Cycle is unnecessary, because AppEquation already goes through all neurons in the layer
+		 //Cycle to go through all input nerons
+		for (int i = 0; i < input.size(); i++)
+		{
+			//std::cout << " " << y[i] << " ";
+			//fout << " " << y[i] << " ";
+			//here weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
+			// but since the zero layer has only zeros, weights don't matter
+			input.at(i) += h * updateNeuron(tau, zeros, input.at(i), wIJ[i], input_bias.at(i), touches.at(i));
+		}
+
+		//Cycle to go through all hidden nerons
+		for (int i = 0; i < hidden.size(); i++)
+		{
+			//std::cout << " " << y[i] << " ";
+			//fout << " " << y[i] << " ";
+			hidden.at(i) += h * updateNeuron(tau, input, hidden.at(i), wIJ[i], hidden_bias.at(i), hidden_sensors.at(i));
+		}
+		
+		//Cycle to go through all output nerons
+		for (int i = 0; i < hidden.size(); i++)
+		{
+			//std::cout << " " << y[i] << " ";
+			//fout << " " << y[i] << " ";
+			output.at(i) += h * updateNeuron(tau, hidden, output.at(i), wJK[i], output_bias.at(i), output_sensors.at(i));
+		}
+		//std::cout << "\n";
+		//fout << "\n";
+	}
+	//std::cout << "done\n";
+	//fout.close();
+	neuron_vals.clear(); neuron_vals.push_back(input); neuron_vals.push_back(hidden); neuron_vals.push_back(output);
+	return neuron_vals;
+}
+// function to update a single neuron according to CTRNN formula
+double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, double sensor_val)
+{
+	//for (int i = 0; i < current_layer.size(); i++)
+	//{
+		double sum_inputs = 0;
+		for (int j = 0; j < previous_layer.size(); j++) { sum_inputs += previous_layer.at(j) * w.at(j); }//sums up the inputs from all 
+																					 // other neurons multiplied by their weights. V.0.0.1: the weight is the same, w. 
+		current_neuron = (-current_neuron + sensor_val + tanh(sum_inputs - bias_val))*(1 / tau);
+	//}
+
+	return current_neuron;
+}
+//END CTRNN CODE:
+//========================================================================================================
 
 void RagdollDemo::initPhysics()
 {
@@ -602,8 +779,8 @@ void RagdollDemo::initPhysics()
 #endif
 
 	//READ WEIGHTS:
-	// from input file into var called 'synapses': 
-	load_data(m_inputFileName, synapses);
+	// from input file into var called 'w': 
+	load_data(m_inputFileName, w);
 
 	//DEBUG READING WTS:
 	// print out weight values, if necessary
@@ -695,6 +872,36 @@ void RagdollDemo::clientMoveAndDisplay()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
 
+	// vector of target angle values:
+	vector<double> targ_angs;
+	//// resize layer vectors according to the number of neurons:
+	//in_neurons.resize(num_input); in_bias.resize(num_input);
+	//hid_neurons.resize(num_hidden); hid_bias.resize(num_hidden);
+	//out_neurons.resize(num_output); out_bias.resize(num_output);
+
+	//// initialize the bias vectors:
+	//for (int i = 0; i < in_bias.size(); i++)
+	//{
+	//	in_bias.push_back(bias_val);
+	//}
+	//for (int i = 0; i < hid_bias.size(); i++)
+	//{
+	//	hid_bias.push_back(bias_val);
+	//}
+	//for (int i = 0; i < out_bias.size(); i++)
+	//{
+	//	out_bias.push_back(bias_val);
+	//}
+
+	// initalize neuron_val vector of vectors: 
+	vector<double> temp_row, temp_bias_row;
+	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); }
+	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
+	for (int i = 0; i < num_hidden; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val);}
+	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
+	for (int i = 0; i < num_output; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val);}
+	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
+
 	//simple dynamics world doesn't handle fixed-time-stepping
 	float ms = getDeltaTimeMicroseconds();
 
@@ -705,7 +912,8 @@ void RagdollDemo::clientMoveAndDisplay()
 	
 	if (ms > minFPS)
 		ms = minFPS;
-
+	// step size for CTRNN:
+	neural_step = ms * 10;
 	//Add actuation time step: 
 	float ActuateTimeStep = ms / 1000000.f;
 
@@ -741,23 +949,32 @@ void RagdollDemo::clientMoveAndDisplay()
 					m_ragdolls[0]->m_bodies[k]->setActivationState(ACTIVE_TAG);
 				}
 #endif
+// Propagate the CTRNN:
+	
+				for (int j = 0; j<num_input; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
+				{
+					sensor_val[j] = touches[j + 3];//the shift is to the fourth value (left foot) and fifth (right foot)
+																				
+				}
 
-// UPDATE MOTORS:
-//Setting connection btw brain and muscles. Commands to actuactor(targetAngle) are set as feedback from sensor
-//- touches[j] * synaptic weight - synapses[i][j]. These synaptic weights will be optimized by Python code
-// i - number of motors, j - number of sensors
-
+				neuron_val = euler(neural_step, h, tau, w, neuron_val, bias, sensor_val);
+				targ_angs = neuron_val.at(2);
 // in the case of the torso there are two additional motors in the additional joint btw torso and pelvis, a total of 10(5*2)
 #ifdef TORSO
-				for (int i = 0; i<10; i++)
+				
+				// for all motors - 10 for torso
+				for (int i = 0; i<num_output; i++)
 				{
-					double targetAngle = 0.0;
-					for (int j = 0; j<2; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
-					{
-						targetAngle = targetAngle + touches[j + 3] * synapses[j][i];//OLD CODE, NO PROPRIOCEPTORS
-																					//targetAngle = targetAngle + inputLayer[j]*synapses[j][i]; //UNCOMMENT for PROPRIOCEPTION
-					}
-					targetAngle = tanh(targetAngle); //making sure the vaules are in [-1;1]
+					double targetAngle = tanh(targ_angs.at(i));
+					//// for all sensors
+					//for (int j = 0; j<2; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
+					//{
+					//	targetAngle = targetAngle + touches[j + 3] * synapses[j][i];//OLD CODE, NO PROPRIOCEPTORS
+					//																//targetAngle = targetAngle + inputLayer[j]*synapses[j][i]; //UNCOMMENT for PROPRIOCEPTION
+					//}
+
+					//
+					//targetAngle = tanh(targetAngle); //making sure the vaules are in [-1;1]
 					switch (i)
 					{
 					case 0:
@@ -814,14 +1031,18 @@ void RagdollDemo::clientMoveAndDisplay()
 						break;
 					}
 #else
-				for (int i = 0; i<8; i++)
+// for all motors - 10 for torso
+				for (int i = 0; i<num_output; i++)
 				{
-					double targetAngle = 0.0;
-					for (int j = 0; j<2; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
-					{
-						targetAngle = targetAngle + touches[j + 3] * synapses[j][i];//OLD CODE, NO PROPRIOCEPTORS
-																					//targetAngle = targetAngle + inputLayer[j]*synapses[j][i]; //UNCOMMENT for PROPRIOCEPTION
-					}
+					double targetAngle = tanh(targ_angs.at(i));
+				//for (int i = 0; i<8; i++)
+				//{
+				//	double targetAngle = 0.0;
+				//	for (int j = 0; j<2; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
+				//	{
+				//		targetAngle = targetAngle + touches[j + 3] * synapses[j][i];//OLD CODE, NO PROPRIOCEPTORS
+				//																	//targetAngle = targetAngle + inputLayer[j]*synapses[j][i]; //UNCOMMENT for PROPRIOCEPTION
+				//	}
 					targetAngle = tanh(targetAngle); //making sure the vaules are in [-1;1]
 					switch (i)
 					{

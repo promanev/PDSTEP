@@ -66,12 +66,57 @@ public:
 	int touches[7]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
 	btVector3 touchPoints[7];//locations of contact points
 #endif
-//	double weights[2][10];//CHANGE ACCORDING TO ANN ARCHITECTURE
-	double tempFitness; //intra-simulation fitness counter
+	//intra-simulation fitness counter
+	double tempFitness; 
+	//counter
 	int SimulationStep;
-	std::vector< std::vector<double> > synapses;// ANN weights 
-	std::string m_inputFileName; // name of the file with weights
-	void initParams(const std::string& inputFileName); // function that reads wts from a file
+	// ANN weights passed from evolutionary algorithm
+	std::vector< std::vector<double> > w;
+	// name of the file with weights
+	std::string m_inputFileName; 
+
+	//CTRNN params:
+	// step size for CTRNN update (should be larger? than the simulation step size, 
+	//so that CTRNN could catch up with environment):
+	double neural_step;
+	// number of input neurons (= number of sensors):
+	int num_input = 2;
+	// number of hidden neurons:
+	int num_hidden = 15;
+	//number of output neurons (= number of joint motors):
+#ifdef TORSO
+	int num_output = 10;
+#else
+	int num_output = 8;
+#endif
+	//// input layer vector (holds values of all neurons in this layer) and its bias:
+	//vector<double> in_neurons; vector<double> in_bias;
+	//// hidden layer vector (holds values of all neurons in this layer):
+	//vector<double> hid_neurons; vector<double> hid_bias;
+	//// output layer vector (holds values of all neurons in this layer):
+	//vector<double> out_neurons; vector<double> out_bias;
+	// all neuronal states or values are held in this vector of vectors:
+	vector< vector< double > > neuron_val;
+	// biases for each layer:
+	vector<vector<double>> bias;	
+	//vector of sensor values:
+	vector<double> sensor_val;
+	// time constant (the same for all neurons, so far; not optimized)
+	double tau = 10;
+	// bias value (the same for all neurons, so far; not optimized)
+	double bias_val = 0.001;
+	// integration step size for updating the neuronal states:
+	double h = 1;
+	// END CTRNN params
+
+	////These are the params: F(double tau, std::vector<double> y, double w, double bias, double input);
+	//typedef vector<double> F(double, vector<double>, vector<vector<double>>, vector<double>, vector<double>);
+	// Declare function that calculates the neuronal state according to the equation within:
+	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, double sensor_val);
+	// (update function, initial value, time1, time2, step size, time constant)
+	vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<double> touches);
+	// function that reads wts from a file
+	void initParams(const std::string& inputFileName); 
 	
 	RagdollDemo();
     // end "added to demo"
