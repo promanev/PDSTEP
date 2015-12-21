@@ -21,7 +21,7 @@ Written by: Marten Svanfeldt
 
 #include <string> //added
 #include <vector> //added
-
+using namespace std; //added
 #include "GlutDemoApplication.h"
 #include "LinearMath/btAlignedObjectArray.h"
 
@@ -106,7 +106,7 @@ public:
 	// bias value (the same for all neurons, so far; not optimized)
 	double bias_val = 0.001;
 	// integration step size for updating the neuronal states:
-	double h = 1;
+	double h;
 	// END CTRNN params
 
 	////These are the params: F(double tau, std::vector<double> y, double w, double bias, double input);

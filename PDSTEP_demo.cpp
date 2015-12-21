@@ -611,7 +611,7 @@ void RagdollDemo::initParams(const std::string& inputFileName)
 //========================================================================================================
 
 //These are the params: F(double tau, std::vector<double> y, double w, double bias, double input);
-typedef vector<double> F(double, vector<double>, vector<vector<double>>, vector<double>, vector<double>);
+//typedef vector<double> F(double, vector<double>, vector<vector<double>>, vector<double>, vector<double>);
 
 // (update function, initial value, time1, time2, step size, time constant)
 vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<double> touches)
@@ -662,68 +662,181 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 	// Separate weight matrices:
 	vector<double> temp_row;
 	vector<vector<double>> wIJ, wJK;
-	wIJ.resize(num_input*num_hidden); wIJ.resize(num_hidden*num_output);
+	//wIJ.resize(num_input, vector<double>(num_hidden)); wJK.resize(num_hidden,vector<double>(num_output));
+	//cout << "I can see num_input " << num_input << endl;
+	//cout << "I can see num_hidden " << num_hidden << endl;
+	//cout << "I can see num_output " << num_output << endl;
+	//cout << "Size of wIJ second row: " << int(wIJ[1].size()) << endl;
+	//cout << "Size of wJK first row: " << int(wJK[0].size()) << endl;
+	//cout << "Size of wJK fifth row: " << int(wJK[4].size()) << endl;
+	//getchar();
 	// populate the wIJ matrix
-	for (int i = 0; i < num_input; i++)
+	for (unsigned i = 0; i < w[0].size(); i++)
 	{
-		temp_row = w[i];
+		for (int j = 0; j < num_input; j++)
+		{
+			//cout << "Weight w[" << i << "][" << j << "]= " << w[i][j] << endl;
+			temp_row.push_back(w[j][i]);
+			//cout << "temp row[" << j <<"]= " << temp_row[j] << endl;
+		}
+
+		//temp_row = w[i];
 		wIJ.push_back(temp_row);
+		temp_row.clear();
+		//cout << "Size of wIJ: " << wIJ[i].size() << endl;
+		//cout << "Size of w[i]: " << w[i].size() << endl;
+		//
+		//for (unsigned j = 0; j < wIJ[i].size(); j++)
+		//{
+		//	cout << "wIJ[" << i << "][" << j << "]= " << wIJ.at(i).at(j) << endl;
+		//}
+		//getchar();
 	}
 	//populate the wJK matrix
-	for (int i = 0; i < num_hidden; i++)
+	//cout << "i counter starts from " << num_input << endl;
+	//cout << "Number of columns in the original weights file w for" << num_input <<"-th row " << int(w[num_input].size()) << endl;
+	//cout << "Number of columns in the original weights file w for" << num_input+num_hidden << "-th row " << int(w[num_input + num_hidden-1].size()) << endl;
+	for (int j = 0; j < num_output; j++)
 	{
-		temp_row = w[i];
+		for (int i = num_input; i < num_hidden + num_input; i++)
+		{
+			//cout << "Weight w[" << i << "][" << j << "]= " << w[i][j] << endl;
+			temp_row.push_back(w[i][j]);
+			//cout << "Temp storage temp_row[" << j << "]= " << temp_row[j] << endl;
+		}
+		//temp_row = w[i];
+		//cout << "Put together temp_row successfully" << endl;
 		wJK.push_back(temp_row);
+		//cout << "Pushed data successfully" << endl;
+		temp_row.clear();
+		//cout << "Cleared temp_row successfully" << endl;
+		//cout << "Size of wJK: " << wJK[i-num_input].size() << endl;
+		//cout << "Size of w[i]: " << w[i].size() << endl;
+		//getchar();
+
+		//for (unsigned j = 0; j < wJK[i-num_input].size(); j++)
+		//{
+		//	cout << "wJK[" << i << "][" << j << "]= " << wJK.at(i-num_input).at(j) << endl;
+		//}
+
 	}
+	//cout << "wts matrices created" << endl;
+	//getchar();
+	//cout << "The size of neuron_val 1st row is " << neuron_val.at(0).size() << endl;
+	//cout << "The size of neuron_val 2nd row is " << neuron_val.at(1).size() << endl;
+	//cout << "The size of neuron_val 3rd row is " << neuron_val.at(2).size() << endl;
+	/*getchar();*/
 	// Separate the array with neuronal values to layers to be processed separately:
-	vector<double> input = neuron_vals[0];
-	vector<double> hidden = neuron_vals[1];
-	vector<double> output = neuron_vals[2];
+	vector<double> input = neuron_vals.at(0);
+	vector<double> hidden = neuron_vals.at(1);
+	vector<double> output = neuron_vals.at(2);
+
+	//cout << "The size of input is " << input.size() << endl;
+	//cout << "The size of hidden is " << hidden.size() << endl;
+	//cout << "The size of output is " << output.size() << endl;
+	/*getchar();*/
 	// Separate the array with bias values to layers to be processed separately:
-	vector<double> input_bias = bias[0];
-	vector<double> hidden_bias = bias[1];
-	vector<double> output_bias = bias[2];
+	vector<double> input_bias = bias.at(0);
+	vector<double> hidden_bias = bias.at(1);
+	vector<double> output_bias = bias.at(2);
 	// create zero array the size of input layer to substitute for non-existent previous layer, 
 	//can be modified to send feedbacks
 	vector<double> zeros = {0.,0.};
 	//create zero vectors to put for absent sensor values for hidden and output layers calculations:
-	vector<double> hidden_sensors; hidden_sensors.resize(num_hidden);
-	vector<double> output_sensors; output_sensors.resize(num_output);
+	vector<double> hidden_sensors; //hidden_sensors.resize(num_hidden);
+	vector<double> output_sensors; //output_sensors.resize(num_output);
 	//populate empty sensor vectors with zeros:
-	for (int i = 0; i < hidden_sensors.size(); i++) { hidden_sensors.at(i) = 0; }
-	for (int i = 0; i < output_sensors.size(); i++) { output_sensors.at(i) = 0; }
+	for (int i = 0; i < num_hidden; i++) { hidden_sensors.push_back(0); }
+	for (int i = 0; i < num_output; i++) { output_sensors.push_back(0); }
 	//Main cycle of neuronal values calculation
 	// Updates all neuronal values for allotted time "neural step" using step size "h": 
+	/*cout << "all vectors initialized" << endl;*/
 	for (double t = 0; t < neural_step; t += h)
 	{
-		//std::cout << std::fixed << std::setprecision(3) << t;
+		//std::cout << std::fixed << std::setprecision(3) << "t = " << t << endl;
 		//fout << std::fixed << std::setprecision(3) << t;
 
 		//Cycle is unnecessary, because AppEquation already goes through all neurons in the layer
 		 //Cycle to go through all input nerons
-		for (int i = 0; i < input.size(); i++)
+		/*cout << "Input layer size is: " << neuron_vals.at(0).size() << endl;*/
+		//getchar();
+		for (unsigned i = 0; i < neuron_vals.at(0).size(); i++)
 		{
 			//std::cout << " " << y[i] << " ";
 			//fout << " " << y[i] << " ";
 			//here weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
 			// but since the zero layer has only zeros, weights don't matter
-			input.at(i) += h * updateNeuron(tau, zeros, input.at(i), wIJ[i], input_bias.at(i), touches.at(i));
+			input.at(i) += h * updateNeuron(tau, zeros, neuron_vals.at(0).at(i), wIJ[i], input_bias.at(i), touches.at(i));
+			//cout << "Input value "<< i << " calculated and is: "<< input.at(i) << endl;
 		}
 
 		//Cycle to go through all hidden nerons
-		for (int i = 0; i < hidden.size(); i++)
+		/*cout << "Hidden layer size is: " << neuron_vals.at(1).size() << endl;*/
+		/*getchar();*/
+		for (unsigned i = 0; i < neuron_vals.at(1).size(); i++)
 		{
 			//std::cout << " " << y[i] << " ";
 			//fout << " " << y[i] << " ";
-			hidden.at(i) += h * updateNeuron(tau, input, hidden.at(i), wIJ[i], hidden_bias.at(i), hidden_sensors.at(i));
+			//cout << "Inside the second cycle" << endl;
+			//cout << "Tau is" << tau << endl;
+			//cout << "Hidden bias val at "<< i << " is " << hidden_bias.at(i) << endl;
+			//cout << "Hidden sensor val at " << i << " is " << hidden_sensors.at(i) <<  endl;
+			//cout << "Input layer vals: ";
+			//for (unsigned j = 0; j < neuron_vals.at(0).size(); j++)
+			//{
+			//	cout << neuron_val.at(0).at(j);
+			//}
+			//cout << endl;
+			////cout << "Weight vals: ";
+			////for (unsigned j = 0; j < wIJ.at(i).size(); j++)
+			////{
+			////	cout << wIJ.at(i).at(j);
+			////}
+			////cout << endl;
+
+			//cout << "Hidden layer vals: ";
+			//for (unsigned j = 0; j < neuron_vals.at(1).size(); j++)
+			//{
+			//	cout << neuron_val.at(1).at(j);
+			//}
+			//cout << endl;
+
+			hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), neuron_vals.at(1).at(i), wIJ.at(i), hidden_bias.at(i), hidden_sensors.at(i));
 		}
 		
 		//Cycle to go through all output nerons
-		for (int i = 0; i < hidden.size(); i++)
+		/*cout << "Output layer size is: " << neuron_vals.at(2).size() << endl;*/
+		//getchar();
+		for (unsigned i = 0; i < neuron_vals.at(2).size(); i++)
 		{
 			//std::cout << " " << y[i] << " ";
 			//fout << " " << y[i] << " ";
-			output.at(i) += h * updateNeuron(tau, hidden, output.at(i), wJK[i], output_bias.at(i), output_sensors.at(i));
+			//cout << "Inside the third cycle" << endl;
+			//cout << "Tau is " << tau << endl;
+			//cout << "Output bias val at " << i << " is " << output_bias.at(i) << endl;
+			//cout << "Output sensor val at " << i << " is " << output_sensors.at(i) << endl;
+			//cout << "Hidden layer vals: ";
+			//for (unsigned j = 0; j < neuron_vals.at(1).size(); j++)
+			//{
+			//	cout << neuron_val.at(1).at(j) << " ";
+			//}
+			//cout << endl;
+
+			//cout << "Weight vals: ";
+			//for (int j = 0; j < num_hidden; j++)
+			//{
+			//	cout << wJK.at(i).at(j) << " ";
+			//}
+			//cout << endl;
+
+			//cout << "Output layer vals: ";
+			//for (unsigned j = 0; j < neuron_vals.at(2).size(); j++)
+			//{
+			//	cout << neuron_val.at(2).at(j) << " ";
+			//}
+			//cout << endl;
+
+			output.at(i) += h * updateNeuron(tau, neuron_vals.at(1), neuron_vals.at(2).at(i), wJK.at(i), output_bias.at(i), output_sensors.at(i));
 		}
 		//std::cout << "\n";
 		//fout << "\n";
@@ -738,10 +851,22 @@ double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, doub
 {
 	//for (int i = 0; i < current_layer.size(); i++)
 	//{
+
 		double sum_inputs = 0;
-		for (int j = 0; j < previous_layer.size(); j++) { sum_inputs += previous_layer.at(j) * w.at(j); }//sums up the inputs from all 
+		//cout << "Inside the updateNeuron" << endl;
+		//cout << "Size of w: " << int(w.size()) << endl;
+		for (unsigned j = 0; j < previous_layer.size(); j++) 
+		{ 
+			//cout << "Counter j = " << j << endl;
+			//cout << "previous_layer.at(j) = " << previous_layer.at(j) << endl;
+			//cout << "w.at(j) = " << w.at(j) << endl;
+			sum_inputs += previous_layer.at(j) * w.at(j);
+			//cout << "Sum_inputs = " << sum_inputs << endl;
+		}//sums up the inputs from all 
 																					 // other neurons multiplied by their weights. V.0.0.1: the weight is the same, w. 
+		//cout << "Sum_inputs value is calculated: " << sum_inputs << endl;
 		current_neuron = (-current_neuron + sensor_val + tanh(sum_inputs - bias_val))*(1 / tau);
+		//cout << "Neuron value: " << current_neuron << endl;
 	//}
 
 	return current_neuron;
@@ -896,12 +1021,21 @@ void RagdollDemo::clientMoveAndDisplay()
 	// initalize neuron_val vector of vectors: 
 	vector<double> temp_row, temp_bias_row;
 	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); }
-	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
+	//cout << "The size of temp_row is " << temp_row.size() << endl;
+
+	neuron_val.push_back(temp_row); 
+	//cout << "The size of neuron_val 1st row is " << neuron_val.at(0).size() << endl;
+
+	temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
 	for (int i = 0; i < num_hidden; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val);}
+	
 	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
+	//cout << "The size of neuron_val 2nd row is " << neuron_val.at(1).size() << endl;
 	for (int i = 0; i < num_output; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val);}
 	neuron_val.push_back(temp_row); temp_row.clear(); bias.push_back(temp_bias_row); temp_bias_row.clear();
-
+	//cout << "The size of neuron_val 3rd row is " << neuron_val.at(2).size() << endl;
+	// initialize vector for sensor values:
+	//sensor_val.resize(num_input);
 	//simple dynamics world doesn't handle fixed-time-stepping
 	float ms = getDeltaTimeMicroseconds();
 
@@ -913,7 +1047,9 @@ void RagdollDemo::clientMoveAndDisplay()
 	if (ms > minFPS)
 		ms = minFPS;
 	// step size for CTRNN:
-	neural_step = ms * 10;
+	neural_step = ms * 10; h = neural_step / 100;
+	//cout << "Neural step is: " << neural_step << endl;
+	//getchar();
 	//Add actuation time step: 
 	float ActuateTimeStep = ms / 1000000.f;
 
@@ -925,11 +1061,13 @@ void RagdollDemo::clientMoveAndDisplay()
 			{
 				//Intiation of the touches
 #ifdef TORSO
+				//cout << "Touches: ";
 				for (int i = 0; i < 8; i++)
 				{
 					touches[i] = 0;
+					//cout << touches[i];
 				}
-
+				cout << endl;
 				//Making sure all the body parts are active every time step:
 				//Body parts change color when inactive for sometime:
 				for (int k = 0; k<8; k++)
@@ -953,11 +1091,17 @@ void RagdollDemo::clientMoveAndDisplay()
 	
 				for (int j = 0; j<num_input; j++) //DON't FORGET TO SWITCH HERE BETWEEN NUMBER OF MAXIMUM J(2 for no PROPRIOS, 10 for PROPRIOS)
 				{
-					sensor_val[j] = touches[j + 3];//the shift is to the fourth value (left foot) and fifth (right foot)
-																				
+					//cout << "Counter j: " << j << endl;
+					//cout << "Touches[j+4]: " << touches[j + 4] << endl;
+					
+					sensor_val.push_back(touches[j + 4]);//the shift is to the fourth value (left foot) and fifth (right foot)
+					//cout << "Sensor[" << j <<"]: " << sensor_val[j] << endl;
 				}
-
+				/*cout << "Sensors updated" << endl;*/
 				neuron_val = euler(neural_step, h, tau, w, neuron_val, bias, sensor_val);
+				//cout << "Neurons updated" << endl;
+				//cout << "Neuron vals at output: " << neuron_val.at(2).at(0) << neuron_val.at(2).at(1) <<endl;
+
 				targ_angs = neuron_val.at(2);
 // in the case of the torso there are two additional motors in the additional joint btw torso and pelvis, a total of 10(5*2)
 #ifdef TORSO
@@ -1135,7 +1279,7 @@ void RagdollDemo::clientMoveAndDisplay()
 		// TIME-CONSTRAINED SIMULATION:
 		// add ability to exit also by a failure parameter (e.g., robot fell)
 #ifdef TRAIN
-		printf("%d, ", SimulationStep);
+		/*printf("%d, ", SimulationStep);*/
 		if (SimulationStep>=500)
 			{
 				//m_ragdolls[0]->Save_APA(4,0,"APA"); //-> to be used if only end of simulation fitness is reported 
