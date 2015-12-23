@@ -57,6 +57,10 @@ class RagdollDemo : public GlutDemoApplication
 public:
 
 	// "added to the demo":
+#ifdef TRAIN
+	int maxStep = 5000;
+#endif
+
 #ifdef TORSO
 	int IDs[8]; //CHANGE ACCORDING TO BODY PLAN; pointers to the body parts in contact
 	int touches[8]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
@@ -71,9 +75,9 @@ public:
 	//counter
 	int SimulationStep;
 	// ANN weights passed from evolutionary algorithm
-	std::vector< std::vector<double> > w;
+	vector<vector<double>> w;
 	// name of the file with weights
-	std::string m_inputFileName; 
+	string m_inputFileName; 
 
 	//CTRNN params:
 	// step size for CTRNN update (should be larger? than the simulation step size, 
@@ -82,41 +86,46 @@ public:
 	// number of input neurons (= number of sensors):
 	int num_input = 2;
 	// number of hidden neurons:
-	int num_hidden = 15;
+	int num_hidden = 2;
 	//number of output neurons (= number of joint motors):
 #ifdef TORSO
 	int num_output = 10;
+	int circleCount = 9;
 #else
 	int num_output = 8;
+	int circleCount = 8;
 #endif
-	//// input layer vector (holds values of all neurons in this layer) and its bias:
-	//vector<double> in_neurons; vector<double> in_bias;
-	//// hidden layer vector (holds values of all neurons in this layer):
-	//vector<double> hid_neurons; vector<double> hid_bias;
-	//// output layer vector (holds values of all neurons in this layer):
-	//vector<double> out_neurons; vector<double> out_bias;
 	// all neuronal states or values are held in this vector of vectors:
-	vector< vector< double > > neuron_val;
+	vector<vector<double>> neuron_val;
 	// biases for each layer:
-	vector<vector<double>> bias;	
+	vector<vector<double>> bias;
+	// gains for each layer:
+	vector<vector<double>> gain;
 	//vector of sensor values:
-	vector<double> sensor_val;
+	vector<int> sensor_val;
 	// time constant (the same for all neurons, so far; not optimized)
 	double tau = 10;
 	// bias value (the same for all neurons, so far; not optimized)
-	double bias_val = 0.001;
+	double bias_val = 0.0;
 	// integration step size for updating the neuronal states:
 	double h;
 	// END CTRNN params
 
-	////These are the params: F(double tau, std::vector<double> y, double w, double bias, double input);
-	//typedef vector<double> F(double, vector<double>, vector<vector<double>>, vector<double>, vector<double>);
+	// neuron_val, bias and gain vectors: 
+	vector<double> temp_row, temp_bias_row, temp_gain_row;
+
+
 	// Declare function that calculates the neuronal state according to the equation within:
-	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, double sensor_val);
+	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, int sensor_val, vector<double> gain);
 	// (update function, initial value, time1, time2, step size, time constant)
-	vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<double> touches);
+	vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
 	// function that reads wts from a file
 	void initParams(const std::string& inputFileName); 
+
+	//vector for neuronal values:
+	vector<vector<vector<double>>> history;//layer * neuron * time
+	//maximum # of simulation steps:
+	int maxStep = 50;
 	
 	RagdollDemo();
     // end "added to demo"
@@ -145,9 +154,9 @@ public:
 		extern GLDebugDrawer gDebugDrawer;
 		// Call the parent method.
 		GlutDemoApplication::renderme();
-#ifdef TORSO
+
 		//Makes a sphere with 0.2 radius around every contact with the ground, third argument is color in RGB (1,0,0)
-		for (int i = 0; i < 9; i++)
+		for (int i = 0; i < circleCount; i++)
 		{
 			if (touches[i])
 				gDebugDrawer.drawSphere(touchPoints[i], 0.2, btVector3(1., 0., 0.));
@@ -157,19 +166,6 @@ public:
 		}
 	}
 	// end "added to the demo"
-#else
-		//Makes a sphere with 0.2 radius around every contact with the ground, third argument is color in RGB (1,0,0)
-		for (int i = 0; i < 8; i++)
-		{
-			if (touches[i])
-				gDebugDrawer.drawSphere(touchPoints[i], 0.2, btVector3(1., 0., 0.));
-			// example:
-			/*Make a circle with a 0.9 radius at (0,0,0) with RGB color (1,0,0).*/
-			/*gDebugDrawer.drawSphere(btVector3(0.,0.,0.), 0.9, btVector3(1., 0., 0.));*/
-		}
-	}
-	// end "added to the demo"
-#endif
 
 	static DemoApplication* Create()
 	{
