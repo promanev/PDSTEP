@@ -58,7 +58,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 5000;
+	int maxStep = 50;
+#else
+	int maxStep = 50;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -124,8 +126,6 @@ public:
 
 	//vector for neuronal values:
 	vector<vector<vector<double>>> history;//layer * neuron * time
-	//maximum # of simulation steps:
-	int maxStep = 50;
 	
 	RagdollDemo();
     // end "added to demo"
