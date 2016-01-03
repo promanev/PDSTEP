@@ -446,14 +446,17 @@ public:
 
 	}
 	// save one-dimensional vector:
-	void save_1dfile(vector<double> data, string filename)
+	void save_1dfile(vector<double> data, string filename, int counter)
 	{
-		ofstream saveFile(filename);
+		//ofstream saveFile(filename);
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
 		//cout << "Size of the file is " << data.size() << endl;
 		for (unsigned i = 0; i < data.size(); i++)
 		{
-			//cout << data.at(i) << endl;
-			saveFile << data.at(i)<< endl;
+			//cout << "Counter is "<<counter <<setprecision(6) <<". Saving number: "<<data.at(i) << endl;
+			saveFile << setprecision(0)<<counter<< " " << setprecision(6) <<data.at(i)<< endl;
+			counter++;
 		}
 		
 		saveFile.close();
@@ -592,7 +595,24 @@ void RagdollDemo::initParams(const std::string& inputFileName)
 // (update function, initial value, time1, time2, step size, time constant)
 vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
 {
-
+	//vector for neuronal values:
+	vector<vector<vector<double>>> tempHist;//layer * neuron * time
+	//to export neuron vals, initialize a temp 3d vector
+	//cout << "neural_step is " << neural_step << endl;
+	//cout << "Length of time is neural_step/h = " << neural_step / h << endl;
+	for (int layer = 0; layer < 3; layer++)
+	{
+		tempHist.push_back(vector<vector<double>>());
+		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+		{
+			tempHist[layer].push_back(vector<double>());
+			for (int time = 0; time < (neural_step/h); time++)
+			{
+				tempHist[layer][neuron].push_back(double());
+			}
+		}
+	}
+	
 	// Separate weight matrices:
 	vector<double> temp_row;
 	vector<vector<double>> wIJ, wJK;
@@ -644,11 +664,15 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 	for (int i = 0; i < num_hidden; i++) { hidden_sensors.push_back(0); }
 	for (int i = 0; i < num_output; i++) { output_sensors.push_back(0); }
 
+	//internal counter for tempHist:
+	int counter = 0;
 	//Main cycle of neuronal values calculation
 	// Updates all neuronal values for allotted time "neural step" using step size "h": 
-	for (double t = 0; t < neural_step; t += h)
+	for (int t = 0; t < (neural_step/h); t++)
 	{
-		//cout << "Time is " << t << endl;
+		//cout << "Counter is " << counter << ". Time is "<<t<<endl;
+		//cout << "Condition t < neural_step: " << (t < neural_step) << endl;
+		//getchar();
 		//cout << "====Updating INPUT layer====" << endl;
 		for (unsigned i = 0; i < neuron_vals.at(0).size(); i++)
 		{
@@ -657,9 +681,9 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 			// summed influence of all neurons from previous layer, and thus gains are parsed from the previous layer:
 			/*cout << "BEFORE update: input[" << i << "] = " << input.at(i) << endl;*/
 			/*input.at(i) += h * updateNeuron(tau, zeros, neuron_vals.at(0).at(i), wIJ[i], input_bias.at(i), touches.at(i), gain.at(0));*/
-			double temp_val = updateNeuron(tau, zeros, neuron_vals.at(0).at(i), wIJ[i], input_bias.at(i), touches.at(i), gain.at(0));
+			input.at(i) += h * updateNeuron(tau, zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
 			//cout << input.at(i) << " + " << h << " * " << temp_val << endl;			
-			input.at(i) += h * temp_val;
+			//input.at(i) += h * temp_val;
 			//cout << "AFTER update: input[" << i << "] = " << input.at(i) << endl;
 		}
 		//getchar();
@@ -671,44 +695,98 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 		for (unsigned i = 0; i < neuron_vals.at(1).size(); i++)
 		{
 			//cout << "BEFORE update: hidden[" << i << "] = " << hidden.at(i) << endl;
-			double temp_val = updateNeuron(tau, neuron_vals.at(0), neuron_vals.at(1).at(i), wIJ.at(i), hidden_bias.at(i), hidden_sensors.at(i), gain.at(0));
+			hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), hidden.at(i), wIJ.at(i), input_bias, hidden_sensors.at(i), gain.at(0));
 			//cout << hidden.at(i) << " + " << h << " * " << temp_val << endl;
-			hidden.at(i) += h * temp_val;
+			//hidden.at(i) += h * temp_val;
 			//cout << "AFTER update: hidden[" << i << "] = " << hidden.at(i) << endl;
 		}
 		
 		//Cycle to go through all output nerons
 		for (unsigned i = 0; i < neuron_vals.at(2).size(); i++)
 		{
-			output.at(i) += h * updateNeuron(tau, neuron_vals.at(1), neuron_vals.at(2).at(i), wJK.at(i), output_bias.at(i), output_sensors.at(i), gain.at(1));
+			output.at(i) += h * updateNeuron(tau, neuron_vals.at(1), output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+		}
+
+		// store current neuronal values for printing:
+		for (int layer = 0; layer < 3; layer++)
+		{
+			for (unsigned neuron = 0; neuron < neuron_vals.at(layer).size(); neuron++)
+			{
+				switch (layer) {
+				case(0) : {tempHist[layer][neuron][counter] = input[neuron]; 
+					//cout << "Counter is " << counter << endl;
+					//cout << "For layer " << layer << " storing value " << input[neuron] << endl;
+					//cout << "Value stored is " << tempHist[layer][neuron][counter] << endl;
+					//cout << "Updating tempHist[" << layer << "][" << neuron << "][" << counter << "] = " << input[neuron] << endl;
+					break; }
+				case(1) : {tempHist[layer][neuron][counter] = hidden[neuron]; break; }
+				case(2) : {tempHist[layer][neuron][counter] = output[neuron]; break; }
+				}
+			}
+		}
+		//getchar();
+		//update tempHist counter:
+		//cout << "Counter before update: " << counter << endl;
+		counter++; tsCounter++;
+		//cout << "Counter after update: " << counter << endl;
+		//getchar();
+	}//End MAIN cycle (through time)
+	neuron_vals.clear(); neuron_vals.push_back(input); neuron_vals.push_back(hidden); neuron_vals.push_back(output);
+	//store neuron vals in a file (VERYYYY SLOW):
+	for (int layer = 0; layer < 3; layer++)
+	{
+		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+		{
+			string fileName;
+			switch (layer)
+			{
+			case 0:
+			{
+				fileName = "input" + to_string(neuron + 1) + ".txt";
+				break;
+			}
+			case 1:
+			{
+				fileName = "hidden" + to_string(neuron + 1) + ".txt";
+				break;
+			}
+			case 2:
+			{
+				fileName = "output" + to_string(neuron + 1) + ".txt";
+				break;
+			}
+			}
+			//cout << "Saving layer " << layer << " and neuron " << neuron << endl;
+			m_ragdolls[0]->save_1dfile(tempHist[layer][neuron], fileName,(tsCounter+1-(neural_step/h))); //-> to be used if only end of simulation fitness is reported
 		}
 	}
-	neuron_vals.clear(); neuron_vals.push_back(input); neuron_vals.push_back(hidden); neuron_vals.push_back(output);
+
+
 	return neuron_vals;
 }
 
 // function to update a single neuron according to CTRNN formula
-double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, int sensor_val, vector<double> gain)
+double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain)
 {
 	//cout << "====UPDATE NEURON fcn====" << endl;
 	//var to store all of the summed input to the neuron:	
 	double sum_inputs = 0;
-	double new_neuron_val;
+	double fcn_val;
 	//cycle through all neurons of previous layer:
 	for (unsigned j = 0; j < previous_layer.size(); j++) 
 		{ 
-			sum_inputs += previous_layer.at(j) * w.at(j) * gain.at(j);
+			sum_inputs += w[j]*tanh((previous_layer.at(j) + bias_val[j]) * gain.at(j));
 		}
 	//cout << "Sum of inputs: " << sum_inputs << endl;
 	//cout << "Current neuron val BEFORE update: " << current_neuron << endl;
 	//cout << "Sensor val: " << current_neuron << endl;
 	//cout << "Bias val: " << bias_val << endl;
 	//update neuron's state
-	new_neuron_val = (-current_neuron + sensor_val + tanh(sum_inputs - bias_val))*(1 / tau);
+	fcn_val = (-current_neuron + sensor_val + sum_inputs)*(1 / tau);
 	//cout << "Current neuron val AFTER update: " << current_neuron << endl;
-	//cout << "New neuron val: " << new_neuron_val << endl;
+	//cout << "New neuron val: " << fcn_val << endl;
 	//cout << "====END of UPDATE NEURON fcn====" << endl;
-	return new_neuron_val;
+	return fcn_val;
 }
 //END CTRNN CODE:
 //========================================================================================================
@@ -721,6 +799,7 @@ void RagdollDemo::initPhysics()
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
 	SimulationStep = 0; //time step counter to exit after desired # of steps
 	tempFitness = 0;
+	tsCounter = 0;
 
 #ifdef TRAIN
 	pause = false;
@@ -742,19 +821,19 @@ void RagdollDemo::initPhysics()
 	};
 #endif
 	// initalize neuron_val, bias and gains(if inside ClienMoveandDisplay - they are reset to 0's each simulation step): 
-	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1); }
+	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(gain_val); }
 
 	neuron_val.push_back(temp_row); temp_row.clear();
 	bias.push_back(temp_bias_row); temp_bias_row.clear();
 	gain.push_back(temp_gain_row); temp_gain_row.clear();
 
-	for (int i = 0; i < num_hidden; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1); }
+	for (int i = 0; i < num_hidden; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(gain_val); }
 
 	neuron_val.push_back(temp_row); temp_row.clear();
 	bias.push_back(temp_bias_row); temp_bias_row.clear();
 	gain.push_back(temp_gain_row); temp_gain_row.clear();
 
-	for (int i = 0; i < num_output; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1); }
+	for (int i = 0; i < num_output; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(gain_val); }
 	neuron_val.push_back(temp_row); temp_row.clear();
 	bias.push_back(temp_bias_row); temp_bias_row.clear();
 	gain.push_back(temp_gain_row); temp_gain_row.clear();
@@ -772,6 +851,20 @@ void RagdollDemo::initPhysics()
 			}
 		}
 	}
+
+	// initalize structure for history1 3d vector:
+	//for (int time = 0; time < maxStep*(neural_step/h); time++)
+	//{
+	//	history1.push_back(vector<vector<double>>());
+	//	for (int layer = 0; layer < 3; layer++)
+	//	{
+	//		history1[time].push_back(vector<double>());
+	//		for (int neuron = 0; neuron < int(neuron_val.at(layer).size()); neuron++)
+	//		{
+	//			history[time][layer].push_back(double());
+	//		}
+	//	}
+	//}
 	//cout << "Time dim size: " << int(history[0][0].size()) << endl;
 	//cout << "# of layers: " << int(history.size()) << endl;
 //	cout << "Third dim size: " << int(history[2].size()) << endl;
@@ -899,8 +992,8 @@ void RagdollDemo::clientMoveAndDisplay()
 	//neural_step = ms * 10/1000000; //conversion from ms to seconds 
 	// step size for integration (how detailed should numeric integration be)
 	//h = neural_step / 5; // ~168 if /100
-	neural_step = 10;
-	h = 1;
+	neural_step = 1;
+	h = 0.1;
 
 	//Add actuation time step: 
 	float ActuateTimeStep = ms / 1000000.f;
@@ -956,24 +1049,20 @@ void RagdollDemo::clientMoveAndDisplay()
 
 				//update neronal states:
 				neuron_val = euler(neural_step, h, tau, w, neuron_val, bias, sensor_val, gain);
-				//pushback value of 1st hidden neuron:
-				//cout << "Value to be printed: " << neuron_val.at(0).at(1) << endl;
+
 				
 				// store current neuronal values for printing:
-				for (int layer = 0; layer < 3; layer++)
-				{
-					for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
-					{
-						history[layer][neuron][SimulationStep] = neuron_val[layer][neuron];
-					}
-				}
-				//cout << "Size of the file is " << hidden1.size() << endl;
+				//for (int layer = 0; layer < 3; layer++)
+				//{
+				//	for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+				//	{
+				//		history[layer][neuron][SimulationStep] = neuron_val[layer][neuron];
+				//	}
+				//}
+				
 				//extract values from output layer:
 				targ_angs = neuron_val.at(2);
-				//for (unsigned i = 0; i < targ_angs.size(); i++)
-				//{
-				//	cout << "Target angle " << i << " is " << targ_angs.at(i) << endl;
-				//}
+
 // in the case of the torso there are two additional motors in the additional joint btw torso and pelvis, a total of 10(5*2)	
 				// for all motors - 10 for torso
 				for (int i = 0; i<num_output; i++)
@@ -1109,35 +1198,35 @@ void RagdollDemo::clientMoveAndDisplay()
 		//saving the neuronal values to a file:
 		if (SimulationStep >= maxStep)
 		{
-			for (int layer = 0; layer < 3; layer++)
-			{
-				for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
-				{
-					string fileName;
-					switch (layer)
-					{
-					case 0 : 
-					{
-						fileName = "input" + to_string(neuron+1) + ".txt"; 
-						break;
-					}
-					case 1 : 
-					{
-						fileName = "hidden" + to_string(neuron+1) + ".txt";
-						break; 
-					}
-					case 2 : 
-					{
-						fileName = "output" + to_string(neuron+1) + ".txt";
-						break;
-					}
-					}
-					m_ragdolls[0]->save_1dfile(history[layer][neuron], fileName); //-> to be used if only end of simulation fitness is reported
-				}
-			}
-			
-			//m_ragdolls[0]->save_1dfile(hidden1,"hidden1.txt"); //-> to be used if only end of simulation fitness is reported 
-			//getchar();
+		//	for (int layer = 0; layer < 3; layer++)
+		//	{
+		//		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+		//		{
+		//			string fileName;
+		//			switch (layer)
+		//			{
+		//			case 0 : 
+		//			{
+		//				fileName = "input" + to_string(neuron+1) + ".txt"; 
+		//				break;
+		//			}
+		//			case 1 : 
+		//			{
+		//				fileName = "hidden" + to_string(neuron+1) + ".txt";
+		//				break; 
+		//			}
+		//			case 2 : 
+		//			{
+		//				fileName = "output" + to_string(neuron+1) + ".txt";
+		//				break;
+		//			}
+		//			}
+		//			m_ragdolls[0]->save_1dfile(history[layer][neuron], fileName); //-> to be used if only end of simulation fitness is reported
+		//		}
+		//	}
+		//	
+		//	//m_ragdolls[0]->save_1dfile(hidden1,"hidden1.txt"); //-> to be used if only end of simulation fitness is reported 
+		//	//getchar();
 			exit(0);
 		}
 

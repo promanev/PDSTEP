@@ -92,7 +92,7 @@ public:
 	//number of output neurons (= number of joint motors):
 #ifdef TORSO
 	int num_output = 10;
-	int circleCount = 9;
+	int circleCount = 9;//for drawing red circles at contact points
 #else
 	int num_output = 8;
 	int circleCount = 8;
@@ -106,9 +106,11 @@ public:
 	//vector of sensor values:
 	vector<int> sensor_val;
 	// time constant (the same for all neurons, so far; not optimized)
-	double tau = 10;
+	double tau = 2;
 	// bias value (the same for all neurons, so far; not optimized)
-	double bias_val = 0.0;
+	double bias_val = 0.01;
+	// gain value (the same for all neurons, so far; not optimized)
+	double gain_val = 10.0;
 	// integration step size for updating the neuronal states:
 	double h;
 	// END CTRNN params
@@ -118,7 +120,7 @@ public:
 
 
 	// Declare function that calculates the neuronal state according to the equation within:
-	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, double bias_val, int sensor_val, vector<double> gain);
+	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain);
 	// (update function, initial value, time1, time2, step size, time constant)
 	vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
 	// function that reads wts from a file
@@ -126,6 +128,10 @@ public:
 
 	//vector for neuronal values:
 	vector<vector<vector<double>>> history;//layer * neuron * time
+	//vector for neuronal values:
+	vector<vector<vector<double>>> history1;//time * layer * neuron
+	//Time Step counter for global tracking:
+	int tsCounter;
 	
 	RagdollDemo();
     // end "added to demo"
