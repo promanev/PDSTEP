@@ -58,9 +58,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 50;
+	int maxStep = 500;
 #else
-	int maxStep = 50;//this is to debug only, remove in final version.
+	int maxStep = 1000;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -97,8 +97,15 @@ public:
 	int num_output = 8;
 	int circleCount = 8;
 #endif
+
 	// all neuronal states or values are held in this vector of vectors:
-	vector<vector<double>> neuron_val;
+	vector<vector<double>> neuron_val;//number of neurons x time
+
+#ifdef JOINT
+	// all neuronal states or values are held in this vector of vectors:
+	vector<vector<double>> joint_val;//number of joints x time
+#endif
+
 	// biases for each layer:
 	vector<vector<double>> bias;
 	// gains for each layer:
@@ -108,9 +115,9 @@ public:
 	// time constant (the same for all neurons, so far; not optimized)
 	double tau = 2;
 	// bias value (the same for all neurons, so far; not optimized)
-	double bias_val = 0.01;
+	double bias_val = 0.001;
 	// gain value (the same for all neurons, so far; not optimized)
-	double gain_val = 10.0;
+	double gain_val = 1.0;
 	// integration step size for updating the neuronal states:
 	double h;
 	// END CTRNN params
@@ -126,13 +133,12 @@ public:
 	// function that reads wts from a file
 	void initParams(const std::string& inputFileName); 
 
-	//vector for neuronal values:
-	vector<vector<vector<double>>> history;//layer * neuron * time
-	//vector for neuronal values:
-	vector<vector<vector<double>>> history1;//time * layer * neuron
-	//Time Step counter for global tracking:
+#ifdef NEURON
+	//Time Step counter for global tracking of neuronal time 
+	//(euler fcn only updates values for "neural_step", export is accumulated internally in euler):
 	int tsCounter;
-	
+#endif
+
 	RagdollDemo();
     // end "added to demo"
 

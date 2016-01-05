@@ -55,6 +55,24 @@ using namespace std;
 #ifndef M_PI_4
 #define M_PI_4     0.785398163397448309616
 #endif
+//                             -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+//Create6DOF(JOINT_RIGHT_HIP,  -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
+//Create6DOF(JOINT_LEFT_ANKLE,  -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+////28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
+//Create6DOF(JOINT_RIGHT_ANKLE,  -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+//Create6DOF(JOINT_BODY_PELVIS, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
+#define HIP_AP_L -(M_PI_4)*2.5
+#define HIP_AP_H (M_PI_4)*0.5
+#define HIP_ML_L -(M_PI_4)*0.67
+#define HIP_ML_H (M_PI_4)*0.67
+#define ANKL_AP_L -(M_PI_4)*1.3
+#define ANKL_AP_H (M_PI_4)*0.3
+#define ANKL_ML_L -(M_PI_4)*0.62
+#define ANKL_ML_H (M_PI_4)*0.62
+#define TP_AP_L -(M_PI_4)*1.3
+#define TP_AP_H (M_PI_4)*0.3
+#define TP_ML_L -(M_PI_4)*0.62
+#define TP_ML_H (M_PI_4)*0.62
 
 class RagDoll
 {
@@ -277,21 +295,21 @@ public:
 		//Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0.25, -0.75, 0), btVector3(0.25, 0.5, 0), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L,HIP_AP_H,HIP_ML_L,HIP_ML_H);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
-		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, -M_PI, M_PI, -M_PI, M_PI);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
+		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, TP_AP_L, TP_AP_H, TP_ML_L, TP_ML_H);
 #else
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
-		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
 		//Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, -M_PI_2, M_PI_2, -M_PI_2, M_PI_2);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
 #endif
 		return;
 	}
@@ -422,9 +440,12 @@ public:
 		joint->setLimit(0, 0, 0);//the limits of the joint
 		joint->setLimit(1, 0, 0);
 		joint->setLimit(2, 0, 0);
+		//joint->setLimit(3, 0, 0);
+		//joint->setLimit(5, btScalar(APLow), btScalar(APHigh));
+		//joint->setLimit(4, btScalar(MLLow), btScalar(MLHigh));
 		joint->setLimit(3, 0, 0);
-		joint->setLimit(5, btScalar(APLow), btScalar(APHigh));
 		joint->setLimit(4, btScalar(MLLow), btScalar(MLHigh));
+		joint->setLimit(5, btScalar(APLow), btScalar(APHigh));
 		m_joints[jointIndex] = joint;
 		joint->setDbgDrawSize(CONSTRAINT_DEBUG_SIZE);
 
@@ -436,31 +457,44 @@ public:
 	void ActuateJoint(int joint_index, int motor_index, double desiredAngle, btScalar timeStep)
 	{
 
-		double diff;
-		float MaxForce = 1.0f;
+		double diff, targetVel;
+		float MaxForce = 10.0f;
+		//cout << "Target is " << desiredAngle << endl;
+		//cout << "Joint["<<joint_index<<"], Motor["<<motor_index<<"] current angle is: "<<m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_currentPosition<< endl;
 		diff = desiredAngle - m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_currentPosition;
+		targetVel = diff / timeStep;
 		m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_enableMotor = true;
-		m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_targetVelocity = diff;
+		m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_targetVelocity = targetVel;
 		m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_maxMotorForce = MaxForce;
-
+		m_joints[joint_index]->getRotationalLimitMotor(motor_index)->m_maxLimitForce = 25.0f;
 
 	}
-	// save one-dimensional vector:
-	void save_1dfile(vector<double> data, string filename, int counter)
+	// save one-dimensional vector of neuronal data (requires external counter):
+	void save_1dfileN(vector<double> data, string filename, int counter)
 	{
-		//ofstream saveFile(filename);
 		ofstream saveFile;
 		saveFile.open(filename, ios_base::app);
-		//cout << "Size of the file is " << data.size() << endl;
 		for (unsigned i = 0; i < data.size(); i++)
 		{
-			//cout << "Counter is "<<counter <<setprecision(6) <<". Saving number: "<<data.at(i) << endl;
+			saveFile << setprecision(0) << counter << " " << setprecision(6) << data.at(i) << endl;
+			counter++;
+		}
+
+		saveFile.close();
+	}
+	// save one-dimensional vector of joint angle data (uses internal counter):
+	void save_1dfileJ(vector<double> data, string filename)
+	{
+		int counter = 1;
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
+		for (unsigned i = 0; i < data.size(); i++)
+		{
 			saveFile << setprecision(0)<<counter<< " " << setprecision(6) <<data.at(i)<< endl;
 			counter++;
 		}
 		
 		saveFile.close();
-		//getchar();
 	}
 
 	// SAVE BODY PART POSITION (at the end of simulation):
@@ -595,11 +629,10 @@ void RagdollDemo::initParams(const std::string& inputFileName)
 // (update function, initial value, time1, time2, step size, time constant)
 vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
 {
+#ifdef NEURON
 	//vector for neuronal values:
 	vector<vector<vector<double>>> tempHist;//layer * neuron * time
 	//to export neuron vals, initialize a temp 3d vector
-	//cout << "neural_step is " << neural_step << endl;
-	//cout << "Length of time is neural_step/h = " << neural_step / h << endl;
 	for (int layer = 0; layer < 3; layer++)
 	{
 		tempHist.push_back(vector<vector<double>>());
@@ -612,7 +645,7 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 			}
 		}
 	}
-	
+#endif	
 	// Separate weight matrices:
 	vector<double> temp_row;
 	vector<vector<double>> wIJ, wJK;
@@ -664,41 +697,27 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 	for (int i = 0; i < num_hidden; i++) { hidden_sensors.push_back(0); }
 	for (int i = 0; i < num_output; i++) { output_sensors.push_back(0); }
 
+#ifdef NEURON
 	//internal counter for tempHist:
 	int counter = 0;
+#endif
+
 	//Main cycle of neuronal values calculation
 	// Updates all neuronal values for allotted time "neural step" using step size "h": 
 	for (int t = 0; t < (neural_step/h); t++)
 	{
-		//cout << "Counter is " << counter << ". Time is "<<t<<endl;
-		//cout << "Condition t < neural_step: " << (t < neural_step) << endl;
-		//getchar();
-		//cout << "====Updating INPUT layer====" << endl;
 		for (unsigned i = 0; i < neuron_vals.at(0).size(); i++)
 		{
-			//here weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
+			// Here, weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
 			// but since the zero layer has only zeros, weights don't matter. Similarly, gains are for calculating the 
 			// summed influence of all neurons from previous layer, and thus gains are parsed from the previous layer:
-			/*cout << "BEFORE update: input[" << i << "] = " << input.at(i) << endl;*/
-			/*input.at(i) += h * updateNeuron(tau, zeros, neuron_vals.at(0).at(i), wIJ[i], input_bias.at(i), touches.at(i), gain.at(0));*/
 			input.at(i) += h * updateNeuron(tau, zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
-			//cout << input.at(i) << " + " << h << " * " << temp_val << endl;			
-			//input.at(i) += h * temp_val;
-			//cout << "AFTER update: input[" << i << "] = " << input.at(i) << endl;
 		}
-		//getchar();
+
 		//Cycle to go through all hidden nerons
-
-		//cout << "Time is " << t << endl;
-		//cout << "====Updating HIDDEN layer====" << endl;
-
 		for (unsigned i = 0; i < neuron_vals.at(1).size(); i++)
 		{
-			//cout << "BEFORE update: hidden[" << i << "] = " << hidden.at(i) << endl;
 			hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), hidden.at(i), wIJ.at(i), input_bias, hidden_sensors.at(i), gain.at(0));
-			//cout << hidden.at(i) << " + " << h << " * " << temp_val << endl;
-			//hidden.at(i) += h * temp_val;
-			//cout << "AFTER update: hidden[" << i << "] = " << hidden.at(i) << endl;
 		}
 		
 		//Cycle to go through all output nerons
@@ -707,31 +726,28 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 			output.at(i) += h * updateNeuron(tau, neuron_vals.at(1), output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
 		}
 
+#ifdef NEURON
 		// store current neuronal values for printing:
 		for (int layer = 0; layer < 3; layer++)
 		{
 			for (unsigned neuron = 0; neuron < neuron_vals.at(layer).size(); neuron++)
 			{
 				switch (layer) {
-				case(0) : {tempHist[layer][neuron][counter] = input[neuron]; 
-					//cout << "Counter is " << counter << endl;
-					//cout << "For layer " << layer << " storing value " << input[neuron] << endl;
-					//cout << "Value stored is " << tempHist[layer][neuron][counter] << endl;
-					//cout << "Updating tempHist[" << layer << "][" << neuron << "][" << counter << "] = " << input[neuron] << endl;
-					break; }
+				case(0) : {tempHist[layer][neuron][counter] = input[neuron];  break; }
 				case(1) : {tempHist[layer][neuron][counter] = hidden[neuron]; break; }
 				case(2) : {tempHist[layer][neuron][counter] = output[neuron]; break; }
 				}
 			}
 		}
-		//getchar();
 		//update tempHist counter:
-		//cout << "Counter before update: " << counter << endl;
 		counter++; tsCounter++;
-		//cout << "Counter after update: " << counter << endl;
-		//getchar();
+#endif
 	}//End MAIN cycle (through time)
+
+	//update neuronal values:
 	neuron_vals.clear(); neuron_vals.push_back(input); neuron_vals.push_back(hidden); neuron_vals.push_back(output);
+
+#ifdef NEURON
 	//store neuron vals in a file (VERYYYY SLOW):
 	for (int layer = 0; layer < 3; layer++)
 	{
@@ -757,10 +773,10 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 			}
 			}
 			//cout << "Saving layer " << layer << " and neuron " << neuron << endl;
-			m_ragdolls[0]->save_1dfile(tempHist[layer][neuron], fileName,(tsCounter+1-(neural_step/h))); //-> to be used if only end of simulation fitness is reported
+			m_ragdolls[0]->save_1dfileN(tempHist[layer][neuron], fileName,(tsCounter+1-(neural_step/h))); //-> to be used if only end of simulation fitness is reported
 		}
 	}
-
+#endif
 
 	return neuron_vals;
 }
@@ -768,7 +784,6 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 // function to update a single neuron according to CTRNN formula
 double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain)
 {
-	//cout << "====UPDATE NEURON fcn====" << endl;
 	//var to store all of the summed input to the neuron:	
 	double sum_inputs = 0;
 	double fcn_val;
@@ -777,15 +792,8 @@ double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, doub
 		{ 
 			sum_inputs += w[j]*tanh((previous_layer.at(j) + bias_val[j]) * gain.at(j));
 		}
-	//cout << "Sum of inputs: " << sum_inputs << endl;
-	//cout << "Current neuron val BEFORE update: " << current_neuron << endl;
-	//cout << "Sensor val: " << current_neuron << endl;
-	//cout << "Bias val: " << bias_val << endl;
 	//update neuron's state
 	fcn_val = (-current_neuron + sensor_val + sum_inputs)*(1 / tau);
-	//cout << "Current neuron val AFTER update: " << current_neuron << endl;
-	//cout << "New neuron val: " << fcn_val << endl;
-	//cout << "====END of UPDATE NEURON fcn====" << endl;
 	return fcn_val;
 }
 //END CTRNN CODE:
@@ -799,7 +807,9 @@ void RagdollDemo::initPhysics()
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
 	SimulationStep = 0; //time step counter to exit after desired # of steps
 	tempFitness = 0;
+#ifdef NEURON
 	tsCounter = 0;
+#endif
 
 #ifdef TRAIN
 	pause = false;
@@ -838,36 +848,17 @@ void RagdollDemo::initPhysics()
 	bias.push_back(temp_bias_row); temp_bias_row.clear();
 	gain.push_back(temp_gain_row); temp_gain_row.clear();
 
-	// initalize structure for history 3d vector:
-	for (int layer = 0; layer < 3; layer++)
+#ifdef JOINT
+	//intialize 2d vector for joint angles:
+	for (int i = 0; i < num_output; i++)
 	{
-		history.push_back(vector<vector<double>>());
-		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+		joint_val.push_back(vector<double>());
+		for (int j = 0; j < maxStep; j++)
 		{
-			history[layer].push_back(vector<double>());
-			for (int time=0; time < maxStep; time++)
-			{
-				history[layer][neuron].push_back(double());
-			}
+			joint_val[i].push_back(double());		
 		}
 	}
-
-	// initalize structure for history1 3d vector:
-	//for (int time = 0; time < maxStep*(neural_step/h); time++)
-	//{
-	//	history1.push_back(vector<vector<double>>());
-	//	for (int layer = 0; layer < 3; layer++)
-	//	{
-	//		history1[time].push_back(vector<double>());
-	//		for (int neuron = 0; neuron < int(neuron_val.at(layer).size()); neuron++)
-	//		{
-	//			history[time][layer].push_back(double());
-	//		}
-	//	}
-	//}
-	//cout << "Time dim size: " << int(history[0][0].size()) << endl;
-	//cout << "# of layers: " << int(history.size()) << endl;
-//	cout << "Third dim size: " << int(history[2].size()) << endl;
+#endif
 	//READ WEIGHTS:
 	// from input file into var called 'w': 
 	load_data(m_inputFileName, w);
@@ -942,7 +933,7 @@ void RagdollDemo::spawnRagdoll(const btVector3& startOffset)
 // define a const that will store the number of frames after which to display graphics.
 // Set > than simulation time to have no video at all 
 #ifdef TRAIN
-#define TICKS_PER_DISPLAY 10000 // should be bigger than total ticks for the whole simulation
+#define TICKS_PER_DISPLAY maxStep // should be bigger than total ticks for the whole simulation
 #else
 #define TICKS_PER_DISPLAY 1
 #endif
@@ -956,47 +947,29 @@ void RagdollDemo::clientMoveAndDisplay()
 	// vector of target angle values:
 	vector<double> targ_angs;
 
-	////vector for neuronal values:
-	//vector<double> hidden1, dummy;
-
-	//// initalize neuron_val, bias and gains: 
-	//vector<double> temp_row, temp_bias_row, temp_gain_row;
-	//for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1);	}
-
-	//neuron_val.push_back(temp_row); temp_row.clear(); 
-	//bias.push_back(temp_bias_row); temp_bias_row.clear();
-	//gain.push_back(temp_gain_row); temp_gain_row.clear();
-
-	//for (int i = 0; i < num_hidden; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1); }
-	//
-	//neuron_val.push_back(temp_row); temp_row.clear(); 
-	//bias.push_back(temp_bias_row); temp_bias_row.clear();
-	//gain.push_back(temp_gain_row); temp_gain_row.clear();
-
-	//for (int i = 0; i < num_output; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(1); }
-	//neuron_val.push_back(temp_row); temp_row.clear(); 
-	//bias.push_back(temp_bias_row); temp_bias_row.clear();
-	//gain.push_back(temp_gain_row); temp_gain_row.clear();
-
 	//simple dynamics world doesn't handle fixed-time-stepping
 	float ms = getDeltaTimeMicroseconds();
-
-	float minFPS = 100000.f/60.f;
+	//float printMS = ms;
+	//float minFPS = 100000.f/60.f;
+	float minFPS = 60.f; // 600 FPS necessary to update sensor values rapidly. 
+	float minFPStime = 1000000.f / minFPS; // 1 sec = 10^6 microsec; time for 1 frame, effectively.
 	// minFPS is downregulated by a factor of 10 (used to be 10^6/60)
 	// to avoid sensors being silent too long.
 	// Change this number here and in the code below
+
+	float sensorThreshold = 4000.f; //need to progress simulation at least this many micsec to continuously update sensors
+	if (ms < sensorThreshold)
+		ms = sensorThreshold;
 	
-	if (ms > minFPS)
-		ms = minFPS;
-	// step size for CTRNN (how far to update neuronal states):
-	//neural_step = ms * 10/1000000; //conversion from ms to seconds 
-	// step size for integration (how detailed should numeric integration be)
-	//h = neural_step / 5; // ~168 if /100
+	if (ms > minFPStime)
+		ms = minFPStime;
+
+	//!!!!look into best values for these vars:
 	neural_step = 1;
 	h = 0.1;
 
 	//Add actuation time step: 
-	float ActuateTimeStep = ms / 1000000.f;
+	float ActuateTimeStep = 10 * ms / 1000000.f;//10 x more time for joint actuation reduces motor jitter
 
 	if (m_dynamicsWorld)
 	{		
@@ -1010,7 +983,7 @@ void RagdollDemo::clientMoveAndDisplay()
 				{
 					touches[i] = 0;
 				}
-				cout << endl;
+				
 				//Making sure all the body parts are active every time step:
 				//Body parts change color when inactive for sometime:
 				for (int k = 0; k<8; k++)
@@ -1030,156 +1003,123 @@ void RagdollDemo::clientMoveAndDisplay()
 					m_ragdolls[0]->m_bodies[k]->setActivationState(ACTIVE_TAG);
 				}
 #endif
-
-// Propagate the CTRNN:
 				// Populate sensor_val for the first update of CTRNN:
 				if (SimulationStep == 0)
 				{
-					//cout << "I am inside sensor_val initialization, even though SimulationStep is " << SimulationStep << endl;
 					for (int j = 0; j < num_input; j++)
 					{
-#ifdef TORSO
-						sensor_val.push_back(0);//the shift is to the fourth value (left foot) and fifth (right foot)
-						//cout << "Pushed back touches[" << j + 4 << "] = " << touches[j + 4] << " , now sensor_val[" << j << "] = " << sensor_val.at(j) << endl;
-#else 
 						sensor_val.push_back(0);
-#endif
 					}
 				}
 
 				//update neronal states:
 				neuron_val = euler(neural_step, h, tau, w, neuron_val, bias, sensor_val, gain);
-
-				
-				// store current neuronal values for printing:
-				//for (int layer = 0; layer < 3; layer++)
-				//{
-				//	for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
-				//	{
-				//		history[layer][neuron][SimulationStep] = neuron_val[layer][neuron];
-				//	}
-				//}
 				
 				//extract values from output layer:
 				targ_angs = neuron_val.at(2);
-
-// in the case of the torso there are two additional motors in the additional joint btw torso and pelvis, a total of 10(5*2)	
-				// for all motors - 10 for torso
+	
+				// for all motors
 				for (int i = 0; i<num_output; i++)
 				{
-					
-					//pass the output layer's values through the activation function:
-					//cout << "Simulation step is: " << SimulationStep << endl;
-					//cout << "Motor counter is: " << i << endl;
-					//cout << "Left leg sensor val is: " << touches[4] << endl;
-					//cout << "Right leg sensor val is: " << touches[5] << endl;
-					//cout << "Left sensor_val is: " << sensor_val.at(0) << endl;
-					//cout << "Right sensor_val is: " << sensor_val.at(1) << endl;
-					//cout << "Target angle is (before activation fcn): " << targ_angs.at(i) << endl;
 					double targetAngle = tanh(targ_angs.at(i));
-					//cout << "Target angle is (after activation fcn): " << targetAngle << endl;
+
 					// check which motor is to be actuated (values are scaled to the desired angle)
 					switch (i)
 					{
-					case 0:
+					case 0: // Body-pelvis, ML
 					{
-						targetAngle = 36 * targetAngle + 22.5; //scaling up to degrees [-13.5; 58.5], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-13.5; 58.5]" << endl;
+						targetAngle = 27.9 * targetAngle; //TP_ML [-27.9; 27.9]
 						break;
 					}
-					case 1:
+					case 1: // Body-pelvis AP
 					{
-						targetAngle = 30 * targetAngle; //scaling up to degrees [-30; 30], to match the boundaries set for this joint //unlocked ankles on 25.02.2014, used to be 0.01* instead of 30*
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-30; 30]" << endl;
+						//targetAngle = 36 * targetAngle + 22.5; //TP_AP [58.5; -13.5]
+						targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
-					case 2:
+					case 2: //Left Hip ML
 					{
-						targetAngle = 67 * targetAngle + 44.5; //scaling up to degrees [-22.5; 112.5], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-22.5; 112.5]" << endl;
+						targetAngle = 30 * targetAngle; //HIP_ML [-30; 30]
 						break;
 					}
-					case 3:
+					case 3: //Left Hip AP
 					{
-						targetAngle = 30 * targetAngle; //scaling up to degrees [-30; 30], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-30; 30]" << endl;
+						//targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
-					case 4:
+					case 4: //Right Hip ML
 					{
-						targetAngle = 67 * targetAngle + 44.5; //scaling up to degrees [-22.5; 112.5], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-22.5; 112.5]" << endl;
+						targetAngle = 30 * targetAngle; //HIP_ML [-30; 30]
 						break;
 					}
-					case 5:
+					case 5: //Right Hip AP
 					{
-						targetAngle = 30 * targetAngle; //scaling up to degrees [-30; 30], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-30; 30]" << endl;
+						//targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
-					case 6:
+					case 6: //Left Ankle ML
 					{
-						targetAngle = 36 * targetAngle + 22.5; //scaling up to degrees [-13.5; 58.5], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-13.5; 58.5]" << endl;
+						targetAngle = 27.9 * targetAngle; //ANKL_ML [-27.9; 27.9]
 						break;
 					}
-					case 7:
+					case 7: //Left Ankle AP
 					{
-						targetAngle = 30 * targetAngle; //scaling up to degrees [-30; 30], to match the boundaries set for this joint //unlocked ankles on 25.02.2014, used to be 0.01* instead of 30*
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-30; 30]" << endl;
+						//targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
+						targetAngle = 36 * targetAngle - 22.5;//[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
-					case 8:
+					case 8: //Right Ankle ML
 					{
-						targetAngle = 36 * targetAngle + 22.5; //scaling up to degrees [-13.5; 58.5], to match the boundaries set for this joint
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-13.5; 58.5]" << endl;
+						targetAngle = 27.9 * targetAngle; //ANKL_ML [-27.9; 27.9]
 						break;
 					}
-					case 9:
+					case 9: //Right Ankle AP
 					{
-						targetAngle = 30 * targetAngle; //scaling up to degrees [-30; 30], to match the boundaries set for this joint //unlocked ankles on 25.02.2014, used to be 0.01* instead of 30*
-						m_ragdolls[0]->ActuateJoint(i / 2, abs(2 * sin(i*M_PI / 2)), targetAngle, ActuateTimeStep);
-						//cout << "Target angle " << i << " is " << targetAngle << "; limit is [-30; 30]" << endl;
+						//targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
+						targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
 					default:
 						break;
 					}
-
-					// Update simulation
-					m_dynamicsWorld->stepSimulation(ms / 100000.f);
+					
+					//convert to radians:
+					targetAngle = targetAngle*M_PI/180;
+					//actuate the i-th motor (indices should be 1 and 2 since in rotational motor there are three motors)
+					//motor[0] twists around vertical Y-axis
+					m_ragdolls[0]->ActuateJoint(i / 2, abs(sin(i*M_PI / 2))+1, targetAngle, ActuateTimeStep);
+					
 
 				}
 				// END UPDATE MOTORS
+
+				// Update simulation
+				m_dynamicsWorld->stepSimulation(ms / 1000000.f);
+#ifdef JOINT
+				//store joint angles for exporting:
+				for (int i = 0; i < num_output; i++)
+				{
+					joint_val[i][SimulationStep] = m_ragdolls[0]->m_joints[i/2]->getRotationalLimitMotor(abs(sin(i*M_PI / 2)) + 1)->m_currentPosition*180/M_PI;
+					//cout << "Joint[" << i + 1 << "] = " << joint_val[i][SimulationStep] << endl;
+				}
 				//DEBUG when touches are updated:
-				//cout << "At SimulationStep " << SimulationStep << "touches are: ";
-				//for (int i = 0; i < 8; i++)
-				//{
-				//	cout << touches[i];
-				//}
-				//cout << endl;
+#endif
 				//Get new sensor vals:
 				sensor_val.clear();
 				for (int j = 0; j < num_input; j++)
 				{
 #ifdef TORSO
 					sensor_val.push_back(touches[j+4]);//the shift is to the fourth value (left foot) and fifth (right foot)
-					//cout << "Pushed back touches[" << j + 4 << "] = " << touches[j + 4] << " , now sensor_val[" << j << "] = " << sensor_val.at(j) << endl;
 #else 
 					sensor_val.push_back(touches[j + 3]);
 #endif
 				}
+
 				// Increase the simulation time step counter:
 				SimulationStep++;
+
 				// make oneStep false, so that the simulation is paused
 				// and waiting next press of the button:
 				if (oneStep)
@@ -1195,43 +1135,31 @@ void RagdollDemo::clientMoveAndDisplay()
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
 
-		//saving the neuronal values to a file:
+#ifdef NEURON
+		// Atm there are 10 neural steps per each simStep->takes forever to run 1000 simSteps.
+		//stopping simulation
 		if (SimulationStep >= maxStep)
 		{
-		//	for (int layer = 0; layer < 3; layer++)
-		//	{
-		//		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
-		//		{
-		//			string fileName;
-		//			switch (layer)
-		//			{
-		//			case 0 : 
-		//			{
-		//				fileName = "input" + to_string(neuron+1) + ".txt"; 
-		//				break;
-		//			}
-		//			case 1 : 
-		//			{
-		//				fileName = "hidden" + to_string(neuron+1) + ".txt";
-		//				break; 
-		//			}
-		//			case 2 : 
-		//			{
-		//				fileName = "output" + to_string(neuron+1) + ".txt";
-		//				break;
-		//			}
-		//			}
-		//			m_ragdolls[0]->save_1dfile(history[layer][neuron], fileName); //-> to be used if only end of simulation fitness is reported
-		//		}
-		//	}
-		//	
-		//	//m_ragdolls[0]->save_1dfile(hidden1,"hidden1.txt"); //-> to be used if only end of simulation fitness is reported 
-		//	//getchar();
 			exit(0);
 		}
+#endif
+
+#ifdef JOINT
+		//saving the joint angle values to a file:
+		if (SimulationStep >= maxStep)
+		{
+			for (int i = 0; i < num_output; i++)
+			{
+			string fileName;
+			fileName = "joint" + to_string(i + 1) + ".txt";
+			m_ragdolls[0]->save_1dfileJ(joint_val[i], fileName); //-> to be used if only end of simulation fitness is reported
+			}
+			exit(0);
+		}
+#endif
 
 		// TIME-CONSTRAINED SIMULATION:
-		// add ability to exit also by a failure parameter (e.g., robot fell)
+		// !!!!!add ability to exit also by a failure parameter (e.g., robot fell)
 #ifdef TRAIN
 		/*printf("%d, ", SimulationStep);*/
 		if (SimulationStep>=maxStep)
@@ -1242,9 +1170,9 @@ void RagdollDemo::clientMoveAndDisplay()
 				//Saving into a text file part of the intra-simulation fitness process, pls note the normalization on SimStep:
 		//		ofstream outputFile;
 		//		outputFile.open("APA.txt");
-		//           outputFile << tempFitness/SimulationStep << endl;
+		//        outputFile << SimulationStep << endl;
 		//		//outputFile << tempFitness<< " , " << SimulationStep << endl; //Line to debug!
-		//           outputFile.close();
+	    //        outputFile.close();
 		//		//End of intra-simulation fitness process. 	
 		//		getchar(); //to debug
 				exit(0);
