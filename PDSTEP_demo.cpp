@@ -567,6 +567,11 @@ public:
 		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
 		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+		//get rotation of pelvis around the Y-axis:
+		btScalar pelRot, junk1, junk2;
+		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
+		// convert rad to deg:
+		pelRot = pelRot * 180 / M_PI;
 
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
@@ -574,10 +579,10 @@ public:
 		double rightTargZ = initPelvisHeight / 1.5;
 		double rightTargX = - height_pelvis / 60;
 		
-		//double result = (-0.1*abs(leftTargX - lfPos.x())+1) + (-0.1*abs(leftTargZ - lfPos.z())+1) + (-0.1*abs(rightTargX - rfPos.x())+1) + (-0.1*abs(rightTargZ - rfPos.z())+1) + pelPos.y() / initPelvisHeight;
+		double result = (1-abs(pelRot/90)) + (-0.1*abs(leftTargX - lfPos.x())+1) + (-0.1*abs(leftTargZ - lfPos.z())+1) + (-0.1*abs(rightTargX - rfPos.x())+1) + (-0.1*abs(rightTargZ - rfPos.z())+1) + pelPos.y() / initPelvisHeight;
 		// this version doesn't take height into account for scaffolding.
-		double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-		return result / 4;//all 5 members of expression at maximum reach 1 each, this is normalization. 
+		//double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
+		return result / 6;//all 5 members of expression at maximum reach 1 each, this is normalization. 
 	}
 #ifdef DEBUG
 	void printFitness()
@@ -589,6 +594,12 @@ public:
 		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
 		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+
+		//get rotation of pelvis around the Y-axis:
+		btScalar pelRot, junk1, junk2;
+		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
+		// convert rad to deg:
+		pelRot = pelRot * 180 / M_PI;
 
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
@@ -604,10 +615,11 @@ public:
 		cout << "Initial pelvis height = " << initPelvisHeight << endl;
 		cout << "Left foot (X,Z) = (" << lfPos.x() << ", " << lfPos.z() << ")" << endl;
 		cout << "Right foot (X,Z) = (" << rfPos.x() << ", " << rfPos.z() << ")" << endl;
-		cout << "Current pelvis height = " << pelPos.y() << endl;
-		double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + pelPos.y() / initPelvisHeight;
+		cout << "Current pelvis HEIGHT = " << pelPos.y() << endl;
+		cout << "Current pelvis ROTATION = " << pelRot << " degrees." << endl;
+		double result = (1-abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + pelPos.y() / initPelvisHeight;
 		//double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-		cout << "Current fitness = " << result / 5 << endl; //all 5 members of expression at maximum reach 1 each, this is normalization. 
+		cout << "Current fitness = " << result / 6 << endl; //all 5 members of expression at maximum reach 1 each, this is normalization. 
 	}
 #endif
 
@@ -1181,6 +1193,10 @@ void RagdollDemo::clientMoveAndDisplay()
 				// Update simulation
 				m_dynamicsWorld->stepSimulation(ms / 1000000.f);
 #ifdef DEBUG
+				//get rotation of pelvis around the Y-axis:
+				btScalar pelvisRot, junk10, junk20;
+				m_ragdolls[0]->m_bodies[BODYPART_PELVIS]->getCenterOfMassTransform().getBasis().getEulerZYX(junk10, pelvisRot, junk20);
+				cout << "Pelvis is initially at " << pelvisRot * 180 / M_PI << " degrees." << endl;
 				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
 				m_ragdolls[0]->printFitness();
 #endif
