@@ -22,6 +22,7 @@ Written by: Marten Svanfeldt
 #include "btBulletDynamicsCommon.h"
 #include "GlutStuff.h"
 #include "GL_ShapeDrawer.h"
+//#include "mex.h"
 
 // added for CTRNN
 #include <iomanip>
@@ -55,22 +56,17 @@ using namespace std;
 #ifndef M_PI_4
 #define M_PI_4     0.785398163397448309616
 #endif
-//                             -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-//Create6DOF(JOINT_RIGHT_HIP,  -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-//Create6DOF(JOINT_LEFT_ANKLE,  -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-////28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-//Create6DOF(JOINT_RIGHT_ANKLE,  -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-//Create6DOF(JOINT_BODY_PELVIS, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-#define HIP_AP_L -(M_PI_4)*2.5
-#define HIP_AP_H (M_PI_4)*0.5
+
+#define HIP_AP_L -(M_PI_4)*0.5
+#define HIP_AP_H (M_PI_4)*2.5
 #define HIP_ML_L -(M_PI_4)*0.67
 #define HIP_ML_H (M_PI_4)*0.67
-#define ANKL_AP_L -(M_PI_4)*1.3
-#define ANKL_AP_H (M_PI_4)*0.3
+#define ANKL_AP_L -(M_PI_4)*0.3
+#define ANKL_AP_H (M_PI_4)*1.3
 #define ANKL_ML_L -(M_PI_4)*0.62
 #define ANKL_ML_H (M_PI_4)*0.62
-#define TP_AP_L -(M_PI_4)*1.3
-#define TP_AP_H (M_PI_4)*0.3
+#define TP_AP_L -(M_PI_4)*0.3
+#define TP_AP_H (M_PI_4)*1.3
 #define TP_ML_L -(M_PI_4)*0.62
 #define TP_ML_H (M_PI_4)*0.62
 
@@ -138,6 +134,8 @@ class RagDoll
 	double height_arm = height_FA + height_UA; // UA+FA
 	double height_hand = -8.96 + 0.0057*avBM + 0.163*avBH;
 #endif
+
+#define PELV_HEIGHT 0.3 + length_foot / 60 + height_leg / 30
 
 	// for the case of torso
 #ifdef TORSO
@@ -503,34 +501,32 @@ public:
 		btRigidBody *body = m_bodies[index];
 		btVector3 EndPosition = body->getCenterOfMassPosition();
 		// path for location of .txt file with coordinate is hardcoded in here:
-		string path = "C:\\Users\\Lunar\\Documents\\[!Library]\\[!!!Phd]\\[!!UVM]\\[!!!!Lab]\\[!!!Robotics]\\[!Human modeling]\\bullet-2.81-rev2613\\" + FileName + ".txt";
+		//string path = "C:\\Users\\Lunar\\Documents\\[!Library]\\[!!!Phd]\\[!!UVM]\\[!!!!Lab]\\[!!!Robotics]\\[!Human modeling]\\bullet-2.81-rev2613\\" + FileName + ".txt";
 		ofstream outputFile;
-		outputFile.open(path);
+		outputFile.open(FileName, ios_base::app);
 		switch (coordinate)
 		{
 		case 'x':
 		{
 			outputFile << EndPosition.x() << endl;
-			outputFile.close();
 			break;
 		}
 
 		case 'y':
 		{
 			outputFile << EndPosition.y() << endl;
-			outputFile.close();
 			break;
 		}
 
 		case 'z':
 		{
 			outputFile << EndPosition.z() << endl;
-			outputFile.close();
 			break;
 		}
 		default:
 			break;
 		}
+		outputFile.close();
 	}
 
 	// GET CoM POSITION
@@ -561,8 +557,95 @@ public:
 		}
 		
 	}
-}; //END OF RagDoll CLASS
 
+	double fitness()
+	{
+		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
+		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
+		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
+
+		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
+		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
+		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+
+		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
+		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
+		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
+		double rightTargZ = initPelvisHeight / 1.5;
+		double rightTargX = - height_pelvis / 60;
+		
+		//double result = (-0.1*abs(leftTargX - lfPos.x())+1) + (-0.1*abs(leftTargZ - lfPos.z())+1) + (-0.1*abs(rightTargX - rfPos.x())+1) + (-0.1*abs(rightTargZ - rfPos.z())+1) + pelPos.y() / initPelvisHeight;
+		// this version doesn't take height into account for scaffolding.
+		double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
+		return result / 4;//all 5 members of expression at maximum reach 1 each, this is normalization. 
+	}
+#ifdef DEBUG
+	void printFitness()
+	{
+		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
+		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
+		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
+
+		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
+		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
+		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+
+		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
+		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
+		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
+		double rightTargZ = initPelvisHeight / 1.5;
+		double rightTargX = -height_pelvis / 60;
+
+		
+		// this version doesn't take height into account for scaffolding.
+		cout << "===========================" << endl;
+		cout << "Left target (X,Z) = (" << leftTargX << ", " << leftTargZ << ")" << endl;
+		cout << "Right target (X,Z) = (" << rightTargX << ", " << rightTargZ << ")" << endl;
+		cout << "Initial pelvis height = " << initPelvisHeight << endl;
+		cout << "Left foot (X,Z) = (" << lfPos.x() << ", " << lfPos.z() << ")" << endl;
+		cout << "Right foot (X,Z) = (" << rfPos.x() << ", " << rfPos.z() << ")" << endl;
+		cout << "Current pelvis height = " << pelPos.y() << endl;
+		double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + pelPos.y() / initPelvisHeight;
+		//double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
+		cout << "Current fitness = " << result / 5 << endl; //all 5 members of expression at maximum reach 1 each, this is normalization. 
+	}
+#endif
+
+	void isUpright()
+	{
+		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
+		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+
+		if (pelPos.y() < PELV_HEIGHT * 0.75)
+		{
+			ofstream outputFile;
+			outputFile.open("fit.txt", ios_base::app);
+			outputFile << 0. << endl;
+			outputFile.close();
+			exit(0);
+		}
+	}
+
+	//void mexFunction(int nlhs, mxArray *plhs[],
+	//	int nrhs, const mxArray *prhs[])
+	//{
+	//	double *y;
+	//	double x;
+
+	//	/* Create a 1-by-1 matrix for the return argument. */
+	//	plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL);
+
+	//	/* Get the scalar value of the input x. */
+	//	/* Note: mxGetScalar returns a value, not a pointer. */
+	//	x = mxGetScalar(prhs[0]);
+
+	//	/* Assign a pointer to the output. */
+	//	y = mxGetPr(plhs[0]);
+
+	//	/* Call the timestwo_alt subroutine. */
+	//	timestwo_alt(y, x);
+	//}
+}; //END OF RagDoll CLASS
 
 static RagdollDemo * ragdollDemo; //for processing touches
 
@@ -1033,8 +1116,8 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 					case 1: // Body-pelvis AP
 					{
-						//targetAngle = 36 * targetAngle + 22.5; //TP_AP [58.5; -13.5]
-						targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
+						targetAngle = 36 * targetAngle + 22.5; //TP_AP [58.5; -13.5]
+						//targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
 					case 2: //Left Hip ML
@@ -1044,8 +1127,8 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 					case 3: //Left Hip AP
 					{
-						//targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
-						targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
+						targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						//targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
 					case 4: //Right Hip ML
@@ -1055,8 +1138,8 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 					case 5: //Right Hip AP
 					{
-						//targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
-						targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
+						targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						//targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
 					case 6: //Left Ankle ML
@@ -1066,8 +1149,8 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 					case 7: //Left Ankle AP
 					{
-						//targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
-						targetAngle = 36 * targetAngle - 22.5;//[-58.5; 13.5] according to constraints on the joints (?)
+						targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
+						//targetAngle = 36 * targetAngle - 22.5;//[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
 					case 8: //Right Ankle ML
@@ -1077,8 +1160,8 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 					case 9: //Right Ankle AP
 					{
-						//targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
-						targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
+						targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
+						//targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
 					default:
@@ -1097,6 +1180,11 @@ void RagdollDemo::clientMoveAndDisplay()
 
 				// Update simulation
 				m_dynamicsWorld->stepSimulation(ms / 1000000.f);
+#ifdef DEBUG
+				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
+				m_ragdolls[0]->printFitness();
+#endif
+
 #ifdef JOINT
 				//store joint angles for exporting:
 				for (int i = 0; i < num_output; i++)
@@ -1158,13 +1246,36 @@ void RagdollDemo::clientMoveAndDisplay()
 		}
 #endif
 
+#ifndef TRAIN //if DEMO!!!
+		//Stopping simulation in the end of time for DEMO robots (paused right before the end)
+		if (SimulationStep >= maxStep)
+		{
+			getchar();
+			exit(0);
+		}
+#endif
+
 		// TIME-CONSTRAINED SIMULATION:
 		// !!!!!add ability to exit also by a failure parameter (e.g., robot fell)
 #ifdef TRAIN
+
+		// terminate simulation if robot falls and give 0 fitness:
+		//m_ragdolls[0]->isUpright();
+
 		/*printf("%d, ", SimulationStep);*/
 		if (SimulationStep>=maxStep)
 			{
-				//m_ragdolls[0]->Save_APA(4,0,"APA"); //-> to be used if only end of simulation fitness is reported 
+				//this exports only a body-part final position:
+				//m_ragdolls[0]->Save_Position(BODYPART_LEFT_FOOT,'x',"fit.txt"); //
+
+				
+
+
+				//this exports fitness calculated by fitness() fcn:
+				ofstream outputFile;
+				outputFile.open("fit.txt", ios_base::app);
+				outputFile << m_ragdolls[0]->fitness() << endl;
+				outputFile.close();
 				//m_ragdolls[0]->Save_DEBUG(2); //-> this is simpler function which only reports Z, X positions of the bodiparts parsed in.
 
 				//Saving into a text file part of the intra-simulation fitness process, pls note the normalization on SimStep:
