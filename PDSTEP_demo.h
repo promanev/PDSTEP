@@ -34,6 +34,8 @@ class btConstraintSolver;
 struct btCollisionAlgorithmCreateFunc;
 class btDefaultCollisionConfiguration;
 
+
+
 class RagdollDemo : public GlutDemoApplication
 {
 
@@ -252,3 +254,4 @@ public:
 
 
 #endif
+
