@@ -87,9 +87,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 500;
+	int maxStep = 150;
 #else
-	int maxStep = 500;//this is to debug only, remove in final version.
+	int maxStep = 150;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -117,7 +117,7 @@ public:
 	// number of input neurons (= number of sensors):
 	int num_input = 2;
 	// number of hidden neurons:
-	int num_hidden = 5;
+	int num_hidden = 2;
 	//number of output neurons (= number of joint motors):
 #ifdef TORSO
 	int num_output = 10;
@@ -228,7 +228,7 @@ public:
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
 		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-		double rightTargZ = initPelvisHeight / 1.5;
+		double rightTargZ = 0; // have the right leg stay on initial position
 		double rightTargX = -height_pelvis / 60;
 		double leftTargY = 0.15;
 		double rightTargY = 0.15;

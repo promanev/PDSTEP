@@ -17,11 +17,11 @@ Written by: Marten Svanfeldt
 */
 
 #define CONSTRAINT_DEBUG_SIZE 0.2f
-
+//#define WIN32_LEAN_AND_MEAN
 ////socket info:
-//#define _WINSOCKAPI_ 
-
+#define _WINSOCKAPI_
 #include <windows.h>
+
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <iphlpapi.h>
@@ -33,8 +33,9 @@ Written by: Marten Svanfeldt
 #pragma comment (lib, "Mswsock.lib")
 #pragma comment (lib, "AdvApi32.lib")
 //
-#define WIN32_LEAN_AND_MEAN
+
 #define DEFAULT_BUFLEN 512
+//#define DEFAULT_NUMWTS 5
 #define DEFAULT_PORT "27015"
 ////end socket info
 
@@ -92,7 +93,7 @@ using namespace std;
 #define TP_ML_L -(M_PI_4)*0.62
 #define TP_ML_H (M_PI_4)*0.62
 
-
+SOCKET ConnectSocket;
 
 class RagDoll
 {
@@ -583,8 +584,8 @@ public:
 		}
 		
 	}
-
-	double fitness()
+	// use 0 if robot fell, 1 - if it didn't fall
+	double fitness(bool isUprightFlag)
 	{
 		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
 		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
@@ -602,15 +603,50 @@ public:
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
 		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-		double rightTargZ = initPelvisHeight / 1.5;
+		//double rightTargZ = initPelvisHeight / 1.5;
+		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
 		double rightTargX = - height_pelvis / 60;
-		
-		double result = (1-abs(pelRot/90)) + (-0.1*abs(leftTargX - lfPos.x())+1) + (-0.1*abs(leftTargZ - lfPos.z())+1) + (-0.1*abs(rightTargX - rfPos.x())+1) + (-0.1*abs(rightTargZ - rfPos.z())+1) + pelPos.y() / initPelvisHeight;
-		// this version doesn't take height into account for scaffolding.
-		//double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-		return result / 6;//all 5 members of expression at maximum reach 1 each, this is normalization. 
+		// cap reward for pelvic height to prevent jumping:
+		double heightReward = 0;
+		if ((pelPos.y() / initPelvisHeight) > 1) { heightReward = 1.0; }
+		else {heightReward = pelPos.y() / initPelvisHeight;}
 
+
+		if (isUprightFlag == 1)
+		{
+			double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + heightReward;
+			return result / 6;//all members of expression at maximum reach 1 each, this is normalization.
+		}
+		else // if robot fell - no fitness for pelvis height, the rest goes:
+		{
+			double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
+			return result / 6;
+		}
 	}
+#ifndef DIRECT
+	void isUpright(int SimulationStep)
+	{
+		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
+		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+		
+		if (pelPos.y() < PELV_HEIGHT * 0.85)
+		{
+			double fitval = fitness(0);
+			ofstream outputFile;
+			outputFile.open("fit.txt", ios_base::app);
+			outputFile << fitval << endl;
+			outputFile.close();
+			//cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 <<". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
+			exit(0);
+		}
+		else if (SimulationStep == 150) 
+			{
+				double fitval = fitness(1);
+				cout << "No fall. Curr height: " << pelPos.y() << " > 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
+			}
+			else return;
+	}
+#endif
 #ifdef DEBUG
 	void printFitness()
 	{
@@ -650,37 +686,48 @@ public:
 	}
 #endif
 
-	void isUpright()
+//NOt optimized, not completely debugged socket connection to MATLAB
+#ifdef DIRECT
+	void isUpright(SOCKET ConnectSocket, bool socketFlag)
 	{
 		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
 
 		if (pelPos.y() < PELV_HEIGHT * 0.75)
 		{
-			ofstream outputFile;
-			outputFile.open("fit.txt", ios_base::app);
-			outputFile << 0. << endl;
-			outputFile.close();
+			if (socketFlag == 0)//0 flag = don't use socket
+			{
+				ofstream outputFile;
+				outputFile.open("fit.txt", ios_base::app);
+				outputFile << fitness(0) << endl;
+				outputFile.close();
+			}
+			else
+			{
+				storeFitness(ConnectSocket, 0);
+			}
 			exit(0);
 		}
 	}
-#ifdef SOCKET
-	void storeVar()
+
+
+	SOCKET CreateClientSocket()
 	{
 		// socket info
 		WSADATA wsaData;
-
+		SOCKET ConnectSocket = INVALID_SOCKET;
 		// Initialize Winsock
 		struct addrinfo *result = NULL,
-			*ptr = NULL,
-			hints;
+						*ptr = NULL,
+						hints;
 		//make a test cal, check for errors:
 		int iResult;
+
+		//Initialize Winsock:
 		iResult = WSAStartup(MAKEWORD(2, 2), &wsaData);
 		if (iResult != 0) {
-			printf("WSAStartup failed with error: %d\n", iResult);
+			//printf("WSAStartup failed with error: %d\n", iResult);
 		}
-		// Create a server socket
 		ZeroMemory(&hints, sizeof(hints));
 		hints.ai_family = AF_UNSPEC;
 		hints.ai_socktype = SOCK_STREAM;
@@ -689,113 +736,107 @@ public:
 		// Resolve the server address and port
 		iResult = getaddrinfo("localhost", DEFAULT_PORT, &hints, &result);
 		if (iResult != 0) {
-			printf("getaddrinfo failed with error: %d\n", iResult);
+			//printf("getaddrinfo failed with error: %d\n", iResult);
 			WSACleanup();
+			//return 1;
 		}
 
-		//Create a SOCKET object for the server to listen for client applications: 
-		SOCKET ListenSocket = INVALID_SOCKET;
-		ListenSocket = socket(result->ai_family, result->ai_socktype, result->ai_protocol);
+		// Attempt to connect to an address until one succeeds
+		for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
 
-		//Check for errors to ensure that the socket is a valid socket:
-		if (ListenSocket == INVALID_SOCKET) {
-			printf("Error at socket(): %ld\n", WSAGetLastError());
-			freeaddrinfo(result);
-			WSACleanup();
-			return 1;
+			// Create a SOCKET for connecting to server
+			ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
+			if (ConnectSocket == INVALID_SOCKET) {
+				//printf("socket failed with error: %ld\n", WSAGetLastError());
+				WSACleanup();
+				//return 1;
+			}
+
+			// Connect to server.
+			iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
+			//if (iResult == 0) cout << "C++ Client is connected to the server!\n";
+			if (iResult == SOCKET_ERROR) {
+				closesocket(ConnectSocket);
+				ConnectSocket = INVALID_SOCKET;
+				continue;
+			}
+			break;
 		}
-
-		// Bind a socket: setup the TCP listening socket:
-		iResult = bind(ListenSocket, result->ai_addr, (int)result->ai_addrlen);
-		if (iResult == SOCKET_ERROR) {
-			printf("bind failed with error: %d\n", WSAGetLastError());
-			freeaddrinfo(result);
-			closesocket(ListenSocket);
-			WSACleanup();
-		}
-
-		// address returned by the getaddrinfo is no longer needed, clear it:
 		freeaddrinfo(result);
+		if (ConnectSocket == INVALID_SOCKET) {
+			//printf("C++ Client is unable to connect to server!\n");
+			WSACleanup();
+			//return 1;
+		}
+		return ConnectSocket;
+	}
 
-		// listen on a socket for incoming connection requests:
-		if (listen(ListenSocket, SOMAXCONN) == SOCKET_ERROR) {
-			printf("Listen failed with error: %ld\n", WSAGetLastError());
-			closesocket(ListenSocket);
+	void CloseSocket(SOCKET ConnectSocket)
+	{
+		int iResult;
+		// shutdown the send half of the connection since no more data will be sent
+		//iResult = shutdown(ClientSocket, SD_SEND);
+		iResult = shutdown(ConnectSocket, SD_BOTH);
+		//cout << "Shutdown socket result (0 - receive, 1 - send, 2 - both): " << iResult << endl;
+		if (iResult == SOCKET_ERROR) {
+			//printf("shutdown failed: %d\n", WSAGetLastError());
+			//closesocket(ClientSocket);
+			closesocket(ConnectSocket);
 			WSACleanup();
 		}
-
-		//Create a temporary SOCKET object called ClientSocket for accepting connections from clients:
-		SOCKET ClientSocket;
-		ClientSocket = INVALID_SOCKET;
-
-		// Accept a client socket
-		ClientSocket = accept(ListenSocket, NULL, NULL);
-		if (ClientSocket == INVALID_SOCKET) {
-			printf("accept failed: %d\n", WSAGetLastError());
-			closesocket(ListenSocket);
-			WSACleanup();
-		}
-		//// Attempt to connect to an address until one succeeds
-		//for (ptr = result; ptr != NULL; ptr = ptr->ai_next) {
-
-		//	// Create a SOCKET for connecting to server
-		//	ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-		//	if (ConnectSocket == INVALID_SOCKET) {
-		//		printf("socket failed with error: %ld\n", WSAGetLastError());
-		//		WSACleanup();
-		//	}
-
-		//	// Connect to server.
-		//	iResult = connect(ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-		//	if (iResult == SOCKET_ERROR) {
-		//		closesocket(ConnectSocket);
-		//		ConnectSocket = INVALID_SOCKET;
-		//		continue;
-		//	}
-		//	break;
-		//}
-		
+		// cleanup
+		closesocket(ConnectSocket);
+		WSACleanup();
+	}
+	//If robot fell - pass 0, if not - 1
+	void storeFitness(SOCKET ConnectSocket, bool isUprightFlag)
+	{
 		double fitVal;
 		int iSendResult;
 
-		fitVal = fitness();
-		iSendResult = send(ClientSocket, (const char*) fitVal, sizeof(double), 0);
+		fitVal = fitness(isUprightFlag);
+		string fitValStr = to_string(fitVal);
+		//iSendResult = send(ClientSocket, fitValStr.c_str(), fitValStr.size(), 0);
+		//cout << "Attempting to send fitness value of " << fitValStr.c_str() << endl;
+		//cout << "Message length: " << fitValStr.size() << endl;
+		iSendResult = send(ConnectSocket, fitValStr.c_str(), fitValStr.size(), 0);
+		//cout << "Send result (number of bytes sent, or -1 = Error): " << iSendResult << endl;
 		if (iSendResult == SOCKET_ERROR) {
-			printf("send failed: %d\n", WSAGetLastError());
-			closesocket(ClientSocket);
+			//printf("send failed: %d\n", WSAGetLastError());
+			//closesocket(ClientSocket);
+			closesocket(ConnectSocket);
 			WSACleanup();
-		}
-
-		// shutdown the send half of the connection since no more data will be sent
-		iResult = shutdown(ClientSocket, SD_SEND);
-		if (iResult == SOCKET_ERROR) {
-			printf("shutdown failed: %d\n", WSAGetLastError());
-			closesocket(ClientSocket);
-			WSACleanup();
-		}
-	
+		}	
 	}
+
+	//vector<vector<double>> receiveWeights(SOCKET ConnectSocket)
+
+	//void receiveWeights(SOCKET ConnectSocket)
+	//{
+	//	int iResult;
+	//	//int numWts = 5;
+	//	char recvbuf[DEFAULT_BUFLEN];
+	//	int recvbuflen = DEFAULT_BUFLEN;
+	//	
+	//	double tempValue;
+	//	//for (int i = 0; i < numWts; i++)
+	//	//{
+	//	iResult = recv(ConnectSocket, recvbuf, recvbuflen, 0);
+	//		//cout << "Read Result: " << iResult << endl;
+	//	if (iResult > 0)
+	//	{
+	//		printf("Bytes received: %d\n", iResult);
+	//		tempValue = atof(recvbuf);
+	//		cout << "Value obtained: " << tempValue << endl;
+	//	}
+	//	else if (iResult == 0)
+	//		printf("Connection closed\n");
+	//	else
+	//		printf("recv failed with error: %d\n", WSAGetLastError());
+	//	//}
+	//}
 #endif
 
-	//void mexFunction(int nlhs, mxArray *plhs[],
-	//	int nrhs, const mxArray *prhs[])
-	//{
-	//	double *y;
-	//	double x;
-
-	//	/* Create a 1-by-1 matrix for the return argument. */
-	//	plhs[0] = mxCreateDoubleMatrix(1, 1, mxREAL);
-
-	//	/* Get the scalar value of the input x. */
-	//	/* Note: mxGetScalar returns a value, not a pointer. */
-	//	x = mxGetScalar(prhs[0]);
-
-	//	/* Assign a pointer to the output. */
-	//	y = mxGetPr(plhs[0]);
-
-	//	/* Call the timestwo_alt subroutine. */
-	//	timestwo_alt(y, x);
-	//}
 }; //END OF RagDoll CLASS
 
 static RagdollDemo * ragdollDemo; //for processing touches
@@ -1036,6 +1077,7 @@ double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, doub
 void RagdollDemo::initPhysics()
 {
 //ADDED:
+
 	srand(time(NULL));
 	ragdollDemo = this;// for processing touches, note spelling "ragdollDemo"
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
@@ -1046,7 +1088,7 @@ void RagdollDemo::initPhysics()
 #endif
 
 #ifdef TRAIN
-	pause = false;
+	pause = false;// should be false
 #else
 	pause = true;
 #endif
@@ -1154,7 +1196,10 @@ void RagdollDemo::initPhysics()
 	// Create the second ragdoll at a different location:
 	//startOffset.setValue(-1,0.5,0);
 	//spawnRagdoll(startOffset);
-
+#ifdef DIRECT
+	ConnectSocket = m_ragdolls[0]->CreateClientSocket();
+	//m_ragdolls[0]->receiveWeights(ConnectSocket);
+#endif
 	clientResetScene();		
 }
 
@@ -1177,6 +1222,9 @@ void RagdollDemo::spawnRagdoll(const btVector3& startOffset)
 void RagdollDemo::clientMoveAndDisplay()
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT); 
+
+	//SOCKET CREATION:
+	//SOCKET ConnectSocket = m_ragdolls[0]->CreateSocket();
 
 	// vector of target angle values:
 	vector<double> targ_angs;
@@ -1362,7 +1410,59 @@ void RagdollDemo::clientMoveAndDisplay()
 
 				// Increase the simulation time step counter:
 				SimulationStep++;
+#ifdef TRAIN
+				// terminate simulation if robot falls and give it reduced fitness:
+				m_ragdolls[0]->isUpright(SimulationStep);
+#endif //end TRAIN directive
 
+
+#ifndef TRAIN //if DEMO!!!
+
+				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
+				if (SimulationStep >= maxStep)
+				{
+					//m_ragdolls[0]->receiveWeights(ConnectSocket);
+					//m_ragdolls[0]->storeFitness(ConnectSocket);
+					//m_ragdolls[0]->receiveWeights(ConnectSocket);
+					//m_ragdolls[0]->CloseSocket(ConnectSocket);
+					m_ragdolls[0]->isUpright(SimulationStep);
+					cout << "Robot didn't fall. SimStep: " << SimulationStep << ", C++ fitness: " << m_ragdolls[0]->fitness(1) << endl;
+					getchar();
+					exit(0);
+				}
+#else // IF TRAIN:
+
+				// TIME-CONSTRAINED SIMULATION:
+				/*printf("%d, ", SimulationStep);*/
+				if (SimulationStep >= maxStep)
+				{
+#ifdef DIRECT
+					//socket export:
+					m_ragdolls[0]->storeFitness(ConnectSocket, 1);
+					m_ragdolls[0]->CloseSocket(ConnectSocket);
+#else
+					//this exports fitness calculated by fitness() fcn:
+					double fitval = m_ragdolls[0]->fitness(1);
+					ofstream outputFile;
+					outputFile.open("fit.txt", ios_base::app);
+					outputFile << fitval << endl;
+					outputFile.close();
+					//cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
+					//m_ragdolls[0]->Save_DEBUG(2); //-> this is simpler function which only reports Z, X positions of the bodiparts parsed in.
+
+					//Saving into a text file part of the intra-simulation fitness process, pls note the normalization on SimStep:
+					//		ofstream outputFile;
+					//		outputFile.open("APA.txt");
+					//        outputFile << SimulationStep << endl;
+					//		//outputFile << tempFitness<< " , " << SimulationStep << endl; //Line to debug!
+					//        outputFile.close();
+					//		//End of intra-simulation fitness process. 	
+					//		getchar(); //to debug
+#endif
+					exit(0);
+				}
+#endif
+				
 				// make oneStep false, so that the simulation is paused
 				// and waiting next press of the button:
 				if (oneStep)
@@ -1371,6 +1471,11 @@ void RagdollDemo::clientMoveAndDisplay()
 					pause = true;
 				}
 			}// END NO VIDEO LOOP
+
+#ifndef TRAIN // if DEMO:
+			cout << "SimStep = " << SimulationStep << endl;// for timing of the demo robots
+			cout << "Fitness: " << m_ragdolls[0]->fitness(1) << endl;
+#endif
 		}// END if(!pause && oneStep)
 		
 	
@@ -1401,49 +1506,6 @@ void RagdollDemo::clientMoveAndDisplay()
 		}
 #endif
 
-#ifndef TRAIN //if DEMO!!!
-		//Stopping simulation in the end of time for DEMO robots (paused right before the end)
-		if (SimulationStep >= maxStep)
-		{
-			getchar();
-			exit(0);
-		}
-#endif
-
-		// TIME-CONSTRAINED SIMULATION:
-		// !!!!!add ability to exit also by a failure parameter (e.g., robot fell)
-#ifdef TRAIN
-
-		// terminate simulation if robot falls and give 0 fitness:
-		//m_ragdolls[0]->isUpright();
-
-		/*printf("%d, ", SimulationStep);*/
-		if (SimulationStep>=maxStep)
-			{
-				//this exports only a body-part final position:
-				//m_ragdolls[0]->Save_Position(BODYPART_LEFT_FOOT,'x',"fit.txt"); //
-
-				
-
-
-				//this exports fitness calculated by fitness() fcn:
-				ofstream outputFile;
-				outputFile.open("fit.txt", ios_base::app);
-				outputFile << m_ragdolls[0]->fitness() << endl;
-				outputFile.close();
-				//m_ragdolls[0]->Save_DEBUG(2); //-> this is simpler function which only reports Z, X positions of the bodiparts parsed in.
-
-				//Saving into a text file part of the intra-simulation fitness process, pls note the normalization on SimStep:
-		//		ofstream outputFile;
-		//		outputFile.open("APA.txt");
-		//        outputFile << SimulationStep << endl;
-		//		//outputFile << tempFitness<< " , " << SimulationStep << endl; //Line to debug!
-	    //        outputFile.close();
-		//		//End of intra-simulation fitness process. 	
-		//		getchar(); //to debug
-				exit(0);
-			}
-#endif
 
 	}
 
