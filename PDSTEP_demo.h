@@ -87,9 +87,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 150;
+	int maxStep = 400;
 #else
-	int maxStep = 150;//this is to debug only, remove in final version.
+	int maxStep = 400;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -239,6 +239,7 @@ public:
 		gDebugDrawer.drawSphere(left, 0.4, btVector3(0., 1., 0.));
 		gDebugDrawer.drawSphere(right, 0.4, btVector3(0., 0., 1.));
 #endif
+
 	}
 	// end "added to the demo"
 

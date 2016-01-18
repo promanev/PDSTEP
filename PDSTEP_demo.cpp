@@ -606,25 +606,28 @@ public:
 		//double rightTargZ = initPelvisHeight / 1.5;
 		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
 		double rightTargX = - height_pelvis / 60;
-		// cap reward for pelvic height to prevent jumping:
-		double heightReward = 0;
-		if ((pelPos.y() / initPelvisHeight) > 1) { heightReward = 1.0; }
-		else {heightReward = pelPos.y() / initPelvisHeight;}
+		//// cap reward for pelvic height to prevent jumping:
+		//double heightReward = 0;
+		//if ((pelPos.y() / initPelvisHeight) > 1) { heightReward = 1.0; }
+		//else {heightReward = pelPos.y() / initPelvisHeight;}
 
 
 		if (isUprightFlag == 1)
 		{
-			double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + heightReward;
-			return result / 6;//all members of expression at maximum reach 1 each, this is normalization.
-		}
-		else // if robot fell - no fitness for pelvis height, the rest goes:
-		{
 			double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-			return result / 6;
+			return result / 5;//all members of expression at maximum reach 1 each, this is normalization.
 		}
+		else // if robot fell - lower the fitness for everything but movement towards the target:
+		{
+			double result = 0.3*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.3*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.3*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
+			return result / 5;
+		}
+
+		//double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
+		//return result / 5;
 	}
 #ifndef DIRECT
-	void isUpright(int SimulationStep)
+	void isUpright(int SimulationStep, int maxStep)
 	{
 		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
@@ -639,7 +642,7 @@ public:
 			//cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 <<". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
 			exit(0);
 		}
-		else if (SimulationStep == 150) 
+		else if (SimulationStep == maxStep) 
 			{
 				double fitval = fitness(1);
 				cout << "No fall. Curr height: " << pelPos.y() << " > 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
@@ -699,7 +702,7 @@ public:
 			{
 				ofstream outputFile;
 				outputFile.open("fit.txt", ios_base::app);
-				outputFile << fitness(0) << endl;
+				outputFile << fitness() << endl;
 				outputFile.close();
 			}
 			else
@@ -789,12 +792,12 @@ public:
 		WSACleanup();
 	}
 	//If robot fell - pass 0, if not - 1
-	void storeFitness(SOCKET ConnectSocket, bool isUprightFlag)
+	void storeFitness(SOCKET ConnectSocket)
 	{
 		double fitVal;
 		int iSendResult;
 
-		fitVal = fitness(isUprightFlag);
+		fitVal = fitness();
 		string fitValStr = to_string(fitVal);
 		//iSendResult = send(ClientSocket, fitValStr.c_str(), fitValStr.size(), 0);
 		//cout << "Attempting to send fitness value of " << fitValStr.c_str() << endl;
@@ -1212,7 +1215,7 @@ void RagdollDemo::spawnRagdoll(const btVector3& startOffset)
 // define a const that will store the number of frames after which to display graphics.
 // Set > than simulation time to have no video at all 
 #ifdef TRAIN
-#define TICKS_PER_DISPLAY maxStep // should be bigger than total ticks for the whole simulation
+#define TICKS_PER_DISPLAY 1// maxStep // maxStep be bigger than total ticks for the whole simulation
 #else
 #define TICKS_PER_DISPLAY 1
 #endif
@@ -1412,11 +1415,23 @@ void RagdollDemo::clientMoveAndDisplay()
 				SimulationStep++;
 #ifdef TRAIN
 				// terminate simulation if robot falls and give it reduced fitness:
-				m_ragdolls[0]->isUpright(SimulationStep);
+				m_ragdolls[0]->isUpright(SimulationStep,maxStep);
 #endif //end TRAIN directive
 
 
 #ifndef TRAIN //if DEMO!!!
+				
+				btRigidBody * pelvis = m_ragdolls[0]->m_bodies[BODYPART_PELVIS];
+				btVector3 pelPos = pelvis->getCenterOfMassPosition();
+				if (pelPos.y() < 3.42645*0.85)
+				{
+					double fitval = m_ragdolls[0]->fitness(0);
+					cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << 3.42645 << " = " << 3.42645*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
+					getchar();
+					exit(0);
+				}
+				cout << "Step: " << SimulationStep << ". Fitness: " << m_ragdolls[0]->fitness(1) << endl;
+				//cout << "Step: " << SimulationStep << ". Fitness: " << m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT,'z') << endl;
 
 				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
 				if (SimulationStep >= maxStep)
@@ -1425,10 +1440,23 @@ void RagdollDemo::clientMoveAndDisplay()
 					//m_ragdolls[0]->storeFitness(ConnectSocket);
 					//m_ragdolls[0]->receiveWeights(ConnectSocket);
 					//m_ragdolls[0]->CloseSocket(ConnectSocket);
-					m_ragdolls[0]->isUpright(SimulationStep);
-					cout << "Robot didn't fall. SimStep: " << SimulationStep << ", C++ fitness: " << m_ragdolls[0]->fitness(1) << endl;
+					//btRigidBody * pelvis = m_ragdolls[0]->m_bodies[BODYPART_PELVIS];
+					//btVector3 pelPos = pelvis->getCenterOfMassPosition();
+					//double fitval = m_ragdolls[0]->fitness();
+					//if (pelPos.y() < 3.42645*0.85)
+					//{
+					//	cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << 3.42645 << " = " << 3.42645*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
+					//	getchar();
+					//	exit(0);
+					//}
+					//else
+					//{
+					//double fitval = m_ragdolls[0]->fitness(1);
+					double fitval = m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT, 'z');
+					cout << "Robot didn't fall. SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
 					getchar();
 					exit(0);
+					//}
 				}
 #else // IF TRAIN:
 
@@ -1443,6 +1471,7 @@ void RagdollDemo::clientMoveAndDisplay()
 #else
 					//this exports fitness calculated by fitness() fcn:
 					double fitval = m_ragdolls[0]->fitness(1);
+					//double fitval = m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT, 'z');
 					ofstream outputFile;
 					outputFile.open("fit.txt", ios_base::app);
 					outputFile << fitval << endl;
@@ -1472,10 +1501,10 @@ void RagdollDemo::clientMoveAndDisplay()
 				}
 			}// END NO VIDEO LOOP
 
-#ifndef TRAIN // if DEMO:
-			cout << "SimStep = " << SimulationStep << endl;// for timing of the demo robots
-			cout << "Fitness: " << m_ragdolls[0]->fitness(1) << endl;
-#endif
+//#ifndef TRAIN // if DEMO:
+//			cout << "SimStep = " << SimulationStep << endl;// for timing of the demo robots
+//			cout << "Fitness: " << m_ragdolls[0]->fitness() << endl;
+//#endif
 		}// END if(!pause && oneStep)
 		
 	
