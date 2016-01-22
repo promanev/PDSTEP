@@ -26,6 +26,7 @@ using namespace std; //added
 #include "LinearMath/btAlignedObjectArray.h"
 
 #include "GLDebugDrawer.h" //added
+#include <time.h>
 class btBroadphaseInterface;
 class btCollisionShape;
 class btOverlappingPairCache;
@@ -57,6 +58,7 @@ class RagdollDemo : public GlutDemoApplication
 	bool pause, oneStep; //bools additional control 
 
 public:
+	// for the case of torso
 #ifdef TORSO
 	enum
 	{
@@ -69,8 +71,9 @@ public:
 		BODYPART_PLATFORM, //7
 
 		BODYPART_COUNT
-	};
+};
 #else
+#ifndef KNEES
 	enum
 	{
 
@@ -83,13 +86,28 @@ public:
 
 		BODYPART_COUNT
 	};
+#else
+	enum
+	{
+		BODYPART_PELVIS = 0, //1
+		BODYPART_LEFT_THIGH, //2
+		BODYPART_RIGHT_THIGH, //3
+		BODYPART_LEFT_SHANK, //4
+		BODYPART_RIGHT_SHANK, //5
+		BODYPART_LEFT_FOOT, //6
+		BODYPART_RIGHT_FOOT, //7
+		BODYPART_PLATFORM, //8
+
+		BODYPART_COUNT
+	};
+#endif
 #endif
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 400;
+	int maxStep = 300;
 #else
-	int maxStep = 400;//this is to debug only, remove in final version.
+	int maxStep = 300;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -97,15 +115,23 @@ public:
 	int touches[8]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
 	btVector3 touchPoints[8];//locations of contact points
 #else
+#ifndef KNEES
 	int IDs[7]; //CHANGE ACCORDING TO BODY PLAN; pointers to the body parts in contact
 	int touches[7]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
 	btVector3 touchPoints[7];//locations of contact points
+#else // KNEES
+	int IDs[9]; //CHANGE ACCORDING TO BODY PLAN; pointers to the body parts in contact
+	int touches[9]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
+	btVector3 touchPoints[9];//locations of contact points
+	int bodyCount = sizeof(IDs) / sizeof(IDs[0]);
 #endif
+#endif
+
 	//intra-simulation fitness counter
 	double tempFitness; 
 	//counter
 	int SimulationStep;
-	// ANN weights passed from evolutionary algorithm
+	// weights passed from evolutionary algorithm
 	vector<vector<double>> w;
 	// name of the file with weights
 	string m_inputFileName; 
@@ -122,9 +148,14 @@ public:
 #ifdef TORSO
 	int num_output = 10;
 	int circleCount = 9;//for drawing red circles at contact points
-#else
+#else // NO TORSO
+#ifndef KNEES
 	int num_output = 8;
 	int circleCount = 8;
+#else
+	int num_output = 12;
+	int circleCount = 12;//for drawing red circles at contact points
+#endif
 #endif
 
 	// all neuronal states or values are held in this vector of vectors:
@@ -167,6 +198,8 @@ public:
 	//(euler fcn only updates values for "neural_step", export is accumulated internally in euler):
 	int tsCounter;
 #endif
+
+	double activityIndex;
 
 	RagdollDemo();
     // end "added to demo"

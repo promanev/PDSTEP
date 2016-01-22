@@ -35,7 +35,6 @@ Written by: Marten Svanfeldt
 //
 
 #define DEFAULT_BUFLEN 512
-//#define DEFAULT_NUMWTS 5
 #define DEFAULT_PORT "27015"
 ////end socket info
 
@@ -80,18 +79,26 @@ using namespace std;
 #define M_PI_4     0.785398163397448309616
 #endif
 
-#define HIP_AP_L -(M_PI_4)*0.5
-#define HIP_AP_H (M_PI_4)*2.5
-#define HIP_ML_L -(M_PI_4)*0.67
-#define HIP_ML_H (M_PI_4)*0.67
-#define ANKL_AP_L -(M_PI_4)*0.3
-#define ANKL_AP_H (M_PI_4)*1.3
-#define ANKL_ML_L -(M_PI_4)*0.62
-#define ANKL_ML_H (M_PI_4)*0.62
-#define TP_AP_L -(M_PI_4)*0.3
-#define TP_AP_H (M_PI_4)*1.3
-#define TP_ML_L -(M_PI_4)*0.62
-#define TP_ML_H (M_PI_4)*0.62
+// These values are obtained from:
+// (1) (Sample size = 1892) "Normal Hip and Knee Active Range of Motion: The Relationship to Age", KE ROach, TP Miles, PHYS THER, 1991. Taken from Table 3, All Ages column. 
+// (2) (Sample size = 537) "Normal Range of Motion of the Hip, Knee and Ankle Joints in Male Subjects, 30-40 Years of Age", A Roaas & GBJ Andersson, Acta orthop. scand. 1982. Table 1
+// (3) (Sample size = 100) "Three-dimensional Lumbar Spinal Kinematics: A Study of Range of Movement in 100 Healthy Subjects Aged 20 to 60+ Years". G van Herp et al. Rheumatology, 2000. Table I, Age 20-29 averaged for F and M
+#define HIP_AP_L -(M_PI_4)*0.42222 // -19 (1)
+#define HIP_AP_H (M_PI_4)*2.68888 // 121 (1)
+#define HIP_ML_L -(M_PI_4)*0.86222 // -38.8 (2) Abduction
+#define HIP_ML_H (M_PI_4)*0.677777 // 30.5 (2) Adduction
+#define ANKL_AP_L -(M_PI_4)*0.34 // -15.3 (2) Dorsiflexion
+#define ANKL_AP_H (M_PI_4)*0.882222 // 39.7 (2) Plantar flexion
+#define ANKL_ML_L -(M_PI_4)*0.616666 // -27.75 (2) Eversion
+#define ANKL_ML_H (M_PI_4)*0.616666 // 27.75 (2) Inversion
+#define TP_AP_L -(M_PI_4)*1.281111 // -57.65 (3) Flexion
+#define TP_AP_H (M_PI_4)*0.661111 // 29.75 (3) Extension
+#define TP_ML_L -(M_PI_4)*0.565555 // -25.45 (3) Left side bending
+#define TP_ML_H (M_PI_4)*0.583333 // 26.25 (3) Left side bending
+#define KNEE_AP_L -(M_PI_4)*2.93333 // -132 (1) flexion
+#define KNEE_AP_H 0 // extesion was near 0
+#define KNEE_ML_L 0
+#define KNEE_ML_H 0
 
 SOCKET ConnectSocket;
 
@@ -177,6 +184,7 @@ class RagDoll
 			BODYPART_COUNT
 		};
 #else
+#ifndef KNEES
 	enum
 	{
 		
@@ -189,22 +197,38 @@ class RagDoll
 
 		BODYPART_COUNT
 	};
+#else
+	enum
+	{
+		BODYPART_PELVIS = 0, //1
+		BODYPART_LEFT_THIGH, //2
+		BODYPART_RIGHT_THIGH, //3
+		BODYPART_LEFT_SHANK, //4
+		BODYPART_RIGHT_SHANK, //5
+		BODYPART_LEFT_FOOT, //6
+		BODYPART_RIGHT_FOOT, //7
+		BODYPART_PLATFORM, //8
+
+		BODYPART_COUNT
+	};
+#endif
 #endif
 
 	// in the case of torso - one more joint
 #ifdef TORSO
 		enum
 		{
-			JOINT_BODY_PELVIS = 0, //1
-			JOINT_LEFT_HIP, //2
-			JOINT_RIGHT_HIP, //3
-			JOINT_LEFT_ANKLE, //4
-			JOINT_RIGHT_ANKLE, //5
+			JOINT_LEFT_HIP=0, //1
+			JOINT_RIGHT_HIP, //2
+			JOINT_LEFT_ANKLE, //3
+			JOINT_RIGHT_ANKLE, //4
+			JOINT_BODY_PELVIS, //5
 
 			JOINT_COUNT
 		};
 
 #else
+#ifndef KNEES 
 	enum
 	{
 		
@@ -215,6 +239,19 @@ class RagDoll
 
 		JOINT_COUNT
 	};
+#else
+	enum
+	{
+		JOINT_LEFT_HIP = 0, //1
+		JOINT_RIGHT_HIP, //2
+		JOINT_LEFT_ANKLE, //3
+		JOINT_RIGHT_ANKLE, //4
+		JOINT_LEFT_KNEE, //5
+		JOINT_RIGHT_KNEE, //6
+
+		JOINT_COUNT
+	};
+#endif
 #endif
 	enum legOrient
 	{
@@ -288,36 +325,37 @@ public:
 		CreateBox(BODYPART_PELVIS, 0., 0.3+length_foot/60+height_leg/30, 0., height_pelvis/60, height_pelvis/60, height_pelvis/60, mass_pelvis);
 		CreateBox(BODYPART_LEFT_FOOT, height_pelvis/60, 0.3+length_foot/120, 0., length_foot/ 60, length_foot/90, length_foot/120, mass_foot);
 		CreateBox(BODYPART_RIGHT_FOOT, -height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
-#else		
+#else	
+#ifndef KNEES
 		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6., 4., 0.15, 200.);
 		CreateBox(BODYPART_PELVIS, 0., 0.3+length_foot/60+height_leg/30, 0., height_pelvis/60, height_pelvis/60, height_pelvis/60, mass_pelvis);
 		CreateBox(BODYPART_LEFT_FOOT, height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
 		CreateBox(BODYPART_RIGHT_FOOT, -height_pelvis/60, 0.3+length_foot/120, 0., length_foot/60, length_foot/90, length_foot/120, mass_foot);
-#endif		
+#else
+		CreateBox(BODYPART_PLATFORM, 0, 0.15, 0, 6., 4., 0.15, 200.);
+		// mixed up dimensions: width, height, length, now corrected to that described: length, width, height
+		// width - mediolateral dir, length into the screen
+		CreateBox(BODYPART_PELVIS, 0., 0.3 + length_foot / 60 + height_leg / 30, 0., height_pelvis / 60, height_pelvis / 60, height_pelvis / 60, mass_pelvis);
+		CreateBox(BODYPART_LEFT_FOOT, height_pelvis / 60, 0.3 + length_foot / 120, 0., length_foot / 60, length_foot / 90, length_foot / 120, mass_foot);
+		CreateBox(BODYPART_RIGHT_FOOT, -height_pelvis / 60, 0.3 + length_foot / 120, 0., length_foot / 60, length_foot / 90, length_foot / 120, mass_foot);
+#endif
+#endif	
 
-		//FRICTION CTRL:
-		//m_bodies[4]->setFriction(1.3);//Bodies 3,4 are left and right feet respectively, default friction is 0.5. The max friction is 10. 
-		//m_bodies[5]->setFriction(1.3);// W/o abdomen it should be 3,4,5 top down.
-		//m_bodies[6]->setFriction(1.3);
 
 		//CREATE LEGS:
-		//CreateCylinder(BODYPART_LEFT_LEG, Y_ORIENT, 0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
-		//CreateCylinder(BODYPART_RIGHT_LEG, Y_ORIENT, -0.5, 2.1, 0., 1.5, 0.15, 1., 1.);
+#ifndef KNEES
 		CreateCylinder(BODYPART_LEFT_LEG, Y_ORIENT, height_pelvis/60, 0.3+length_foot/60+height_leg/60, 0., height_leg/60, 0.15, 1., mass_leg);
 		CreateCylinder(BODYPART_RIGHT_LEG, Y_ORIENT, -height_pelvis/60, 0.3+length_foot/60+height_leg/60, 0., height_leg/60, 0.15, 1., mass_leg);
-
+#else
+		CreateCylinder(BODYPART_LEFT_THIGH, Y_ORIENT, height_pelvis / 60, 0.3 + length_foot / 60 + height_shank / 30 + height_thigh/60, 0., height_thigh / 60, 0.15, 1., mass_thigh);
+		CreateCylinder(BODYPART_RIGHT_THIGH, Y_ORIENT, -height_pelvis / 60, 0.3 + length_foot / 60 + height_shank / 30 + height_thigh / 60, 0., height_thigh / 60, 0.15, 1., mass_thigh);
+		CreateCylinder(BODYPART_LEFT_SHANK, Y_ORIENT, height_pelvis / 60, 0.3 + length_foot / 60 + height_shank / 60, 0., height_shank / 60, 0.15, 1., mass_shank);
+		CreateCylinder(BODYPART_RIGHT_SHANK, Y_ORIENT, -height_pelvis / 60, 0.3 + length_foot / 60 + height_shank / 60, 0., height_shank / 60, 0.15, 1., mass_shank);
+#endif
 		//CREATE JOINTS:
 		//vectors in argument are the joint location in local body part's coordinate system
 
 #ifdef TORSO
-		////Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
-		//Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		//Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-0.5, 0., 0.), btVector3(0., 1.4, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*2.5, (M_PI_4)*0.5, -(M_PI_4)*0.67, (M_PI_4)*0.67);
-		////Flipped the boundary values on 25.02.2014, used to be 1.3 and 0.3 for AL. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug.  
-		//Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-		////28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
-		//Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -1.5, 0.), btVector3(0., 0.15, 0.), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
-		//Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0.25, -0.75, 0), btVector3(0.25, 0.5, 0), M_PI_2, 0, M_PI_2, -(M_PI_4)*1.3, (M_PI_4)*0.3, -(M_PI_4)*0.62, (M_PI_4)*0.62);
 
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
 		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L,HIP_AP_H,HIP_ML_L,HIP_ML_H);
@@ -328,6 +366,7 @@ public:
 		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0.,-height_leg/60, 0.), btVector3(0.,length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
 		Create6DOF(JOINT_BODY_PELVIS, BODYPART_ABDOMEN, BODYPART_PELVIS, btVector3(0., -height_torso/60, height_pelvis/120), btVector3(0., height_pelvis/60, height_pelvis/120), M_PI_2, 0, M_PI_2, TP_AP_L, TP_AP_H, TP_ML_L, TP_ML_H);
 #else
+#ifndef KNEES
 		//Flipped the boundary values on 25.02.2014, used to be 2.5 and 0.5 for AL, ML is the same - 0.67 and 0.67. Flipped again on 3.03.2014, researching the bug where the limits on the targetAngle produced a "jumping" bug. 
 		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_LEG, btVector3(height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
 		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_LEG, btVector3(-height_pelvis/60, 0., 0.), btVector3(0., height_leg/60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
@@ -335,7 +374,20 @@ public:
 		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_LEG, BODYPART_LEFT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
 		//28 degrees (0.62*(pi/4=45degrees)) for ML movement in the ankles 
 		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_LEG, BODYPART_RIGHT_FOOT, btVector3(0., -height_leg/60, 0.), btVector3(0., length_foot/120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
+#else // if KNEES:
+		Create6DOF(JOINT_LEFT_HIP, BODYPART_PELVIS, BODYPART_LEFT_THIGH, btVector3(height_pelvis / 60, 0., 0.), btVector3(0., height_thigh / 60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
+		Create6DOF(JOINT_RIGHT_HIP, BODYPART_PELVIS, BODYPART_RIGHT_THIGH, btVector3(-height_pelvis / 60, 0., 0.), btVector3(0., height_thigh / 60, 0.), M_PI_2, 0, M_PI_2, HIP_AP_L, HIP_AP_H, HIP_ML_L, HIP_ML_H);
+		Create6DOF(JOINT_LEFT_KNEE, BODYPART_LEFT_THIGH, BODYPART_LEFT_SHANK, btVector3(0., -height_thigh / 60, 0.), btVector3(0., height_shank / 60, 0.), M_PI_2, 0, M_PI_2, KNEE_AP_L, KNEE_AP_H, KNEE_ML_L, KNEE_ML_H);
+		Create6DOF(JOINT_RIGHT_KNEE, BODYPART_RIGHT_THIGH, BODYPART_RIGHT_SHANK, btVector3(0., -height_thigh / 60, 0.), btVector3(0., height_shank / 60, 0.), M_PI_2, 0, M_PI_2, KNEE_AP_L, KNEE_AP_H, KNEE_ML_L, KNEE_ML_H);
+		Create6DOF(JOINT_LEFT_ANKLE, BODYPART_LEFT_SHANK, BODYPART_LEFT_FOOT, btVector3(0., -height_shank / 60, 0.), btVector3(0., length_foot / 120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
+		Create6DOF(JOINT_RIGHT_ANKLE, BODYPART_RIGHT_SHANK, BODYPART_RIGHT_FOOT, btVector3(0., -height_shank / 60, 0.), btVector3(0., length_foot / 120, 0.), M_PI_2, 0, M_PI_2, ANKL_AP_L, ANKL_AP_H, ANKL_ML_L, ANKL_ML_H);
+		
 #endif
+#endif
+		//FRICTION CTRL:
+		m_bodies[BODYPART_LEFT_FOOT]->setFriction(7); 
+		m_bodies[BODYPART_RIGHT_FOOT]->setFriction(7);
+		m_bodies[BODYPART_PLATFORM]->setFriction(7);
 		return;
 	}
 
@@ -606,33 +658,69 @@ public:
 		//double rightTargZ = initPelvisHeight / 1.5;
 		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
 		double rightTargX = - height_pelvis / 60;
-		//// cap reward for pelvic height to prevent jumping:
-		//double heightReward = 0;
-		//if ((pelPos.y() / initPelvisHeight) > 1) { heightReward = 1.0; }
-		//else {heightReward = pelPos.y() / initPelvisHeight;}
-
 
 		if (isUprightFlag == 1)
 		{
-			double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-			return result / 5;//all members of expression at maximum reach 1 each, this is normalization.
+			double result = 0.33334*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.33333*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.33333*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
+			return result / 3;//all members of expression at maximum reach 1 each, this is normalization.
 		}
-		else // if robot fell - lower the fitness for everything but movement towards the target:
+		else // if robot fell - lower the fitness:
 		{
-			double result = 0.3*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.3*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.3*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
-			return result / 5;
+			double result = 0.33334*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.33333*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.33333*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
+			return result / 9;
 		}
 
 		//double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
 		//return result / 5;
 	}
+
+	double onlineFitness()
+	{
+		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
+		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
+		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
+		btGeneric6DofConstraint * rightAnkleJoint = m_joints[JOINT_RIGHT_ANKLE];
+
+		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
+		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
+		btVector3 pelPos = pelvis->getCenterOfMassPosition();
+		//get rotation of pelvis around the Y-axis:
+		btScalar pelRot, junk1, junk2;
+		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
+		//double pelRot = rightAnkleJoint->getRotationalLimitMotor(2)->m_currentPosition;
+		double rightAnkleAPRot = rightAnkleJoint->getRotationalLimitMotor(2)->m_currentPosition;
+		double rightAnkleMLRot = rightAnkleJoint->getRotationalLimitMotor(1)->m_currentPosition;
+
+		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
+		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
+		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
+											  //double rightTargZ = initPelvisHeight / 1.5;
+		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
+		double rightTargX = -height_pelvis / 60;
+		double initPelvRot = 0;
+		double initAnklRotAP = 0;
+		double initAnklRotML = 0;
+
+		// Fitness members:
+		double pelvRotMember = 1 / (1 + abs(initPelvRot - pelRot));
+		double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - rightAnkleAPRot));
+		double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - rightAnkleAPRot));
+		double targetMemberX = 1 / (1 + abs(leftTargX - lfPos.x()));
+		double targetMemberZ = 1 / (1 + abs(leftTargZ - lfPos.z()));
+		double stanceMemberX = 1 / (1 + abs(rightTargX - rfPos.x()));
+		double stanceMemberZ = 1 / (1 + abs(rightTargZ - rfPos.z()));
+		double pelvHeightMember = 1 / (1 + abs(initPelvisHeight - pelPos.y()));
+		double result = pelvRotMember * pelvHeightMember * stanceAnklRotMemberAP * stanceAnklRotMemberML * targetMemberX * targetMemberZ * stanceMemberX*stanceMemberZ;
+		return result;
+
+	}
 #ifndef DIRECT
-	void isUpright(int SimulationStep, int maxStep)
+	void isUpright()
 	{
 		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
 		
-		if (pelPos.y() < PELV_HEIGHT * 0.85)
+		if (pelPos.y() < PELV_HEIGHT * 0.75)
 		{
 			double fitval = fitness(0);
 			ofstream outputFile;
@@ -642,12 +730,6 @@ public:
 			//cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 <<". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
 			exit(0);
 		}
-		else if (SimulationStep == maxStep) 
-			{
-				double fitval = fitness(1);
-				cout << "No fall. Curr height: " << pelPos.y() << " > 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
-			}
-			else return;
 	}
 #endif
 #ifdef DEBUG
@@ -696,7 +778,7 @@ public:
 		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
 
-		if (pelPos.y() < PELV_HEIGHT * 0.75)
+		if (pelPos.y() < PELV_HEIGHT * 0.85)
 		{
 			if (socketFlag == 0)//0 flag = don't use socket
 			{
@@ -856,7 +938,11 @@ bool myContactProcessedCallback(btManifoldPoint& cp,
 #ifdef TORSO
 	int groundID = 7;
 #else
+#ifndef KNEES
 	int groundID = 6;
+#else
+	int groundID = 8;
+#endif
 #endif
 	ID1 = static_cast<int * >(o1->getUserPointer());
 	ID2 = static_cast<int * >(o2->getUserPointer());
@@ -1086,6 +1172,7 @@ void RagdollDemo::initPhysics()
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
 	SimulationStep = 0; //time step counter to exit after desired # of steps
 	tempFitness = 0;
+	activityIndex = 0;//a proxy for robot's activity during the simulation. 
 #ifdef NEURON
 	tsCounter = 0;
 #endif
@@ -1093,7 +1180,7 @@ void RagdollDemo::initPhysics()
 #ifdef TRAIN
 	pause = false;// should be false
 #else
-	pause = true;
+	pause = true;//should be true
 #endif
 	oneStep = false;
 
@@ -1104,10 +1191,17 @@ void RagdollDemo::initPhysics()
 		IDs[i] = i;
 	};
 #else
+#ifndef KNEES
 	for (int i = 0; i < 7; i++)
 	{
 		IDs[i] = i;
 	};
+#else
+	for (int i = 0; i < 9; i++)
+	{
+		IDs[i] = i;
+	};
+#endif
 #endif
 	// initalize neuron_val, bias and gains(if inside ClienMoveandDisplay - they are reset to 0's each simulation step): 
 	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(gain_val); }
@@ -1183,7 +1277,11 @@ void RagdollDemo::initPhysics()
 #ifdef TORSO
 		fixedGround->setUserPointer(&IDs[7]);
 #else
+#ifndef KNEES
 		fixedGround->setUserPointer(&IDs[6]);
+#else
+		fixedGround->setUserPointer(&IDs[8]);
+#endif
 #endif
 		m_dynamicsWorld->addCollisionObject(fixedGround);
 #else
@@ -1215,7 +1313,7 @@ void RagdollDemo::spawnRagdoll(const btVector3& startOffset)
 // define a const that will store the number of frames after which to display graphics.
 // Set > than simulation time to have no video at all 
 #ifdef TRAIN
-#define TICKS_PER_DISPLAY 1// maxStep // maxStep be bigger than total ticks for the whole simulation
+#define TICKS_PER_DISPLAY maxStep // maxStep be bigger than total ticks for the whole simulation
 #else
 #define TICKS_PER_DISPLAY 1
 #endif
@@ -1232,29 +1330,16 @@ void RagdollDemo::clientMoveAndDisplay()
 	// vector of target angle values:
 	vector<double> targ_angs;
 
-	//simple dynamics world doesn't handle fixed-time-stepping
-	float ms = getDeltaTimeMicroseconds();
-	//float printMS = ms;
-	//float minFPS = 100000.f/60.f;
-	float minFPS = 60.f; // 600 FPS necessary to update sensor values rapidly. 
-	float minFPStime = 1000000.f / minFPS; // 1 sec = 10^6 microsec; time for 1 frame, effectively.
-	// minFPS is downregulated by a factor of 10 (used to be 10^6/60)
-	// to avoid sensors being silent too long.
-	// Change this number here and in the code below
-
-	float sensorThreshold = 4000.f; //need to progress simulation at least this many micsec to continuously update sensors
-	if (ms < sensorThreshold)
-		ms = sensorThreshold;
-	
-	if (ms > minFPStime)
-		ms = minFPStime;
+	//BULLET note: simple dynamics world doesn't handle fixed-time-stepping
+	//Roman Popov note: timestep is set to bullet's internal tick = 1/60 of a second. This is done to create constancy between
+	//graphics ON/OFF versions of the robot. Actuation timestep is 5 * 1/60 of a second, as it removes movement jitter.
 
 	//!!!!look into best values for these vars:
 	neural_step = 1;
 	h = 0.1;
 
 	//Add actuation time step: 
-	float ActuateTimeStep = 10 * ms / 1000000.f;//10 x more time for joint actuation reduces motor jitter
+	float ActuateTimeStep = 5*(1.f/60.f);
 
 	if (m_dynamicsWorld)
 	{		
@@ -1263,31 +1348,16 @@ void RagdollDemo::clientMoveAndDisplay()
 			for (int l = 0; l < TICKS_PER_DISPLAY; l++)
 			{
 				//Intiation of the touches
-#ifdef TORSO
-				for (int i = 0; i < 8; i++)
+				for (int i = 0; i < bodyCount; i++)
 				{
 					touches[i] = 0;
 				}
-				
 				//Making sure all the body parts are active every time step:
 				//Body parts change color when inactive for sometime:
-				for (int k = 0; k<8; k++)
+				for (int k = 0; k< bodyCount; k++)
 				{
 					m_ragdolls[0]->m_bodies[k]->setActivationState(ACTIVE_TAG);
 				}
-#else
-				for (int i = 0; i < 7; i++)
-				{
-					touches[i] = 0;
-				}
-
-				//Making sure all the body parts are active every time step:
-				//Body parts change color when inactive for sometime:
-				for (int k = 0; k<7; k++)
-				{
-					m_ragdolls[0]->m_bodies[k]->setActivationState(ACTIVE_TAG);
-				}
-#endif
 				// Populate sensor_val for the first update of CTRNN:
 				if (SimulationStep == 0)
 				{
@@ -1302,86 +1372,110 @@ void RagdollDemo::clientMoveAndDisplay()
 				
 				//extract values from output layer:
 				targ_angs = neuron_val.at(2);
-	
+
 				// for all motors
 				for (int i = 0; i<num_output; i++)
 				{
 					double targetAngle = tanh(targ_angs.at(i));
-
+					//activityIndex += abs(targetAngle); // <- simplified version. Should be: targetAngle / [range of all possible values for targetAngle]
+					// but since [range] = 2, or 1 on each side (it's symmetrical), then it is just targetAngle. The larger the angle, the higher the activity index. 
 					// check which motor is to be actuated (values are scaled to the desired angle)
+					//cout << "SimStep: " << SimulationStep << ". targetAngle(unscaled) = " << targetAngle << ". Accumulated activityIndex = " << activityIndex << endl;
 					switch (i)
 					{
-					case 0: // Body-pelvis, ML
+					case 0: //Left Hip ML
 					{
-						targetAngle = 27.9 * targetAngle; //TP_ML [-27.9; 27.9]
+						targetAngle = ((HIP_ML_H - HIP_ML_L)/2) * targetAngle + ((HIP_ML_H + HIP_ML_L) / 2); //HIP_ML [-38.8; 30.5]
+						//cout << "Sending target angle = " << targetAngle * 180 / M_PI << " to " << i << "-th motor that has limits [" << HIP_ML_L * 180 / M_PI << "," << HIP_ML_H * 180 / M_PI << "]" << endl;
+						
 						break;
 					}
-					case 1: // Body-pelvis AP
+					case 1: //Left Hip AP
 					{
-						targetAngle = 36 * targetAngle + 22.5; //TP_AP [58.5; -13.5]
-						//targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
-						break;
-					}
-					case 2: //Left Hip ML
-					{
-						targetAngle = 30 * targetAngle; //HIP_ML [-30; 30]
-						break;
-					}
-					case 3: //Left Hip AP
-					{
-						targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						targetAngle = ((HIP_AP_H - HIP_AP_L) / 2) * targetAngle + ((HIP_AP_H + HIP_AP_L) / 2); //HIP_AP [-19; 121]
 						//targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
-					case 4: //Right Hip ML
+					case 2: //Right Hip ML
 					{
-						targetAngle = 30 * targetAngle; //HIP_ML [-30; 30]
+						targetAngle = ((HIP_ML_H - HIP_ML_L) / 2) * targetAngle + ((HIP_ML_H + HIP_ML_L) / 2); //HIP_ML [-38.8; 30.5]
 						break;
 					}
-					case 5: //Right Hip AP
+					case 3: //Right Hip AP
 					{
-						targetAngle = 67.5 * targetAngle + 45; //HIP_AP [-22.5; 112.5]
+						targetAngle = ((HIP_AP_H - HIP_AP_L) / 2) * targetAngle + ((HIP_AP_H + HIP_AP_L) / 2); //HIP_AP [-19; 121]
 						//targetAngle = 67.5 * targetAngle - 45; //[22.5; -112.5] according to constraints on the joints (?)
 						break;
 					}
-					case 6: //Left Ankle ML
+					case 4: //Left Ankle ML
 					{
-						targetAngle = 27.9 * targetAngle; //ANKL_ML [-27.9; 27.9]
+						targetAngle = ((ANKL_ML_H - ANKL_ML_L) / 2) * targetAngle + ((ANKL_ML_H + ANKL_ML_L) / 2); //ANKL_ML [-27.75; 27.75]
 						break;
 					}
-					case 7: //Left Ankle AP
+					case 5: //Left Ankle AP
 					{
-						targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
+						targetAngle = ((ANKL_AP_H - ANKL_AP_L) / 2) * targetAngle + ((ANKL_AP_H + ANKL_AP_L) / 2); //ANKL_AP [39.7; -15.3]
 						//targetAngle = 36 * targetAngle - 22.5;//[-58.5; 13.5] according to constraints on the joints (?)
 						break;
 					}
-					case 8: //Right Ankle ML
+					case 6: //Right Ankle ML
 					{
-						targetAngle = 27.9 * targetAngle; //ANKL_ML [-27.9; 27.9]
+						targetAngle = ((ANKL_ML_H - ANKL_ML_L) / 2) * targetAngle + ((ANKL_ML_H + ANKL_ML_L) / 2); //ANKL_ML [-27.75; 27.75]
 						break;
 					}
-					case 9: //Right Ankle AP
+					case 7: //Right Ankle AP
 					{
-						targetAngle = 36 * targetAngle + 22.5; //ANKL_AP [58.5; -13.5]
-						//targetAngle = 36 * targetAngle - 22.5; //[-58.5; 13.5] according to constraints on the joints (?)
+						targetAngle = ((ANKL_AP_H - ANKL_AP_L) / 2) * targetAngle + ((ANKL_AP_H + ANKL_AP_L) / 2); //ANKL_AP [39.7; -15.3]
 						break;
 					}
+#ifdef TORSO
+					case 8: // Body-pelvis, ML
+					{
+						targetAngle = ((TP_ML_H - TP_ML_L) / 2) * targetAngle + ((TP_ML_H + TP_ML_L) / 2); //TP_ML [-25.45; 26.25]
+						break;
+					}
+					case 9: // Body-pelvis AP
+					{
+						targetAngle = ((TP_AP_H - TP_AP_L) / 2) * targetAngle + ((TP_AP_H + TP_AP_L) / 2); //TP_AP [-57.65; 29.75]															  
+						break;
+					}
+#endif
+#ifdef KNEES
+					case 8: // Left Knee, ML
+					{
+						targetAngle = ((KNEE_ML_H - KNEE_ML_L) / 2) * targetAngle + ((KNEE_ML_H + KNEE_ML_L) / 2); //KNEE_ML [0; 0]
+						break;
+					}
+					case 9: // Left Knee AP
+					{
+						targetAngle = ((KNEE_AP_H - KNEE_AP_L) / 2) * targetAngle + ((KNEE_AP_H + KNEE_AP_L) / 2); //KNEE_AP [-132; 0]
+						break;
+					}
+					case 10: // Right Knee, ML
+					{
+						targetAngle = ((KNEE_ML_H - KNEE_ML_L) / 2) * targetAngle + ((KNEE_ML_H + KNEE_ML_L) / 2); //KNEE_ML [0; 0]
+						break;
+					}
+					case 11: // Right Knee, AP
+					{
+						targetAngle = ((KNEE_AP_H - KNEE_AP_L) / 2) * targetAngle + ((KNEE_AP_H + KNEE_AP_L) / 2); //KNEE_AP [-132; 0]
+						break;
+					}
+#endif
 					default:
 						break;
 					}
 					
-					//convert to radians:
-					targetAngle = targetAngle*M_PI/180;
-					//actuate the i-th motor (indices should be 1 and 2 since in rotational motor there are three motors)
-					//motor[0] twists around vertical Y-axis
 					m_ragdolls[0]->ActuateJoint(i / 2, abs(sin(i*M_PI / 2))+1, targetAngle, ActuateTimeStep);
-					
 
+
+					
 				}
 				// END UPDATE MOTORS
 
-				// Update simulation
-				m_dynamicsWorld->stepSimulation(ms / 1000000.f);
+				m_dynamicsWorld->stepSimulation(1.f / 60.f,0);
+				tempFitness += m_ragdolls[0]->onlineFitness();
+				
 #ifdef DEBUG
 				//get rotation of pelvis around the Y-axis:
 				btScalar pelvisRot, junk10, junk20;
@@ -1404,64 +1498,23 @@ void RagdollDemo::clientMoveAndDisplay()
 				sensor_val.clear();
 				for (int j = 0; j < num_input; j++)
 				{
-#ifdef TORSO
-					sensor_val.push_back(touches[j+4]);//the shift is to the fourth value (left foot) and fifth (right foot)
-#else 
-					sensor_val.push_back(touches[j + 3]);
-#endif
+					sensor_val.push_back(touches[(BODYPART_LEFT_FOOT + j)]);
 				}
 
 				// Increase the simulation time step counter:
 				SimulationStep++;
-#ifdef TRAIN
-				// terminate simulation if robot falls and give it reduced fitness:
-				m_ragdolls[0]->isUpright(SimulationStep,maxStep);
-#endif //end TRAIN directive
-
 
 #ifndef TRAIN //if DEMO!!!
-				
-				btRigidBody * pelvis = m_ragdolls[0]->m_bodies[BODYPART_PELVIS];
-				btVector3 pelPos = pelvis->getCenterOfMassPosition();
-				if (pelPos.y() < 3.42645*0.85)
-				{
-					double fitval = m_ragdolls[0]->fitness(0);
-					cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << 3.42645 << " = " << 3.42645*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
-					getchar();
-					exit(0);
-				}
-				cout << "Step: " << SimulationStep << ". Fitness: " << m_ragdolls[0]->fitness(1) << endl;
-				//cout << "Step: " << SimulationStep << ". Fitness: " << m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT,'z') << endl;
 
 				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
 				if (SimulationStep >= maxStep)
 				{
-					//m_ragdolls[0]->receiveWeights(ConnectSocket);
-					//m_ragdolls[0]->storeFitness(ConnectSocket);
-					//m_ragdolls[0]->receiveWeights(ConnectSocket);
-					//m_ragdolls[0]->CloseSocket(ConnectSocket);
-					//btRigidBody * pelvis = m_ragdolls[0]->m_bodies[BODYPART_PELVIS];
-					//btVector3 pelPos = pelvis->getCenterOfMassPosition();
-					//double fitval = m_ragdolls[0]->fitness();
-					//if (pelPos.y() < 3.42645*0.85)
-					//{
-					//	cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << 3.42645 << " = " << 3.42645*0.85 << ". Sim Step: " << SimulationStep << ". Fitness: " << fitval << endl;
-					//	getchar();
-					//	exit(0);
-					//}
-					//else
-					//{
-					//double fitval = m_ragdolls[0]->fitness(1);
-					double fitval = m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT, 'z');
-					cout << "Robot didn't fall. SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
+					double fitval = tempFitness/SimulationStep;
+					cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
 					getchar();
 					exit(0);
-					//}
 				}
 #else // IF TRAIN:
-
-				// TIME-CONSTRAINED SIMULATION:
-				/*printf("%d, ", SimulationStep);*/
 				if (SimulationStep >= maxStep)
 				{
 #ifdef DIRECT
@@ -1469,24 +1522,12 @@ void RagdollDemo::clientMoveAndDisplay()
 					m_ragdolls[0]->storeFitness(ConnectSocket, 1);
 					m_ragdolls[0]->CloseSocket(ConnectSocket);
 #else
-					//this exports fitness calculated by fitness() fcn:
-					double fitval = m_ragdolls[0]->fitness(1);
-					//double fitval = m_ragdolls[0]->xCOM(BODYPART_LEFT_FOOT, 'z');
+					double fitval = tempFitness / SimulationStep;
 					ofstream outputFile;
 					outputFile.open("fit.txt", ios_base::app);
 					outputFile << fitval << endl;
 					outputFile.close();
-					//cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
-					//m_ragdolls[0]->Save_DEBUG(2); //-> this is simpler function which only reports Z, X positions of the bodiparts parsed in.
 
-					//Saving into a text file part of the intra-simulation fitness process, pls note the normalization on SimStep:
-					//		ofstream outputFile;
-					//		outputFile.open("APA.txt");
-					//        outputFile << SimulationStep << endl;
-					//		//outputFile << tempFitness<< " , " << SimulationStep << endl; //Line to debug!
-					//        outputFile.close();
-					//		//End of intra-simulation fitness process. 	
-					//		getchar(); //to debug
 #endif
 					exit(0);
 				}
@@ -1500,11 +1541,6 @@ void RagdollDemo::clientMoveAndDisplay()
 					pause = true;
 				}
 			}// END NO VIDEO LOOP
-
-//#ifndef TRAIN // if DEMO:
-//			cout << "SimStep = " << SimulationStep << endl;// for timing of the demo robots
-//			cout << "Fitness: " << m_ragdolls[0]->fitness() << endl;
-//#endif
 		}// END if(!pause && oneStep)
 		
 	
