@@ -636,6 +636,56 @@ public:
 		}
 		
 	}
+
+	btVector3 wholeBodyCOM()
+	{
+		double thisMass = 0;
+		double sumMass = 0;
+		btScalar COMcoordX = 0;
+		btScalar COMcoordY = 0;
+		btScalar COMcoordZ = 0;
+		//cout << "Foot length = " << length_foot / 30 << ", width = " << length_foot / 45 << ", height = " << length_foot / 60 << endl;
+		//last "body part" is the platform, which should be discounted
+		for (int i = 0; i < BODYPART_COUNT-1; i++)
+		{
+			btRigidBody * pointer = m_bodies[i];
+			btVector3 bodySegCOM = pointer->getCenterOfMassPosition();
+
+			thisMass =  1 / (pointer->getInvMass());
+			sumMass += 1 / (pointer->getInvMass());
+			//cout << "Body = " << i << ", x = " << bodySegCOM.x() << ", y = " << bodySegCOM.y() << ", z = " << bodySegCOM.z() << ", mass = " << thisMass << endl;
+			//cout << "Running summed mass = " << sumMass << endl;
+			COMcoordX += bodySegCOM.x() * thisMass;
+			COMcoordY += bodySegCOM.y() * thisMass;
+			COMcoordZ += bodySegCOM.z() * thisMass;
+		}
+		//cout << "SUM.x = " << COMcoordX << ", SUM.y = " << COMcoordY << ", SUM.z = " << COMcoordZ << ", Summed mass = " << sumMass << endl;
+		COMcoordX = COMcoordX / sumMass;
+		COMcoordY = COMcoordY / sumMass;
+		COMcoordZ = COMcoordZ / sumMass;
+		btVector3 wholeCOM = btVector3(COMcoordX, COMcoordY, COMcoordZ);
+		return wholeCOM;
+	}
+
+	btVector3 getLeftTargPos()
+	{
+		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
+		btScalar TargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
+		btScalar TargY = 0.3 + length_foot / 120;
+		btScalar TargX = height_pelvis / 60;//
+		return btVector3(TargX, TargY, TargZ);
+	}
+
+	btVector3 getRightTargPos()
+	{
+		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
+		btScalar TargZ = 0; //step length = 1/3 of body height, just like in humans
+		btScalar TargY = 0.3 + length_foot / 120;
+		btScalar TargX = - height_pelvis / 60;//
+		return btVector3(TargX, TargY, TargZ);
+	}
+
+
 	// use 0 if robot fell, 1 - if it didn't fall
 	double fitness(bool isUprightFlag)
 	{
@@ -700,13 +750,14 @@ public:
 		double initPelvRot = 0;
 		double initAnklRotAP = 0;
 		double initAnklRotML = 0;
+		double scalingConst = 5;
 
 		// Fitness members:
 		double pelvRotMember = 1 / (1 + abs(initPelvRot - pelRot));
 		double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - rightAnkleAPRot));
 		double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - rightAnkleAPRot));
-		double targetMemberX = 1 / (1 + abs(leftTargX - lfPos.x()));
-		double targetMemberZ = 1 / (1 + abs(leftTargZ - lfPos.z()));
+		double targetMemberX = 1 / (1 + scalingConst * abs(leftTargX - lfPos.x()));
+		double targetMemberZ = 1 / (1 + scalingConst * abs(leftTargZ - lfPos.z()));
 		double stanceMemberX = 1 / (1 + abs(rightTargX - rfPos.x()));
 		double stanceMemberZ = 1 / (1 + abs(rightTargZ - rfPos.z()));
 		double pelvHeightMember = 1 / (1 + abs(initPelvisHeight - pelPos.y()));
@@ -732,44 +783,7 @@ public:
 		}
 	}
 #endif
-#ifdef DEBUG
-	void printFitness()
-	{
-		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
-		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
-		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 
-		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
-		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
-		btVector3 pelPos = pelvis->getCenterOfMassPosition();
-
-		//get rotation of pelvis around the Y-axis:
-		btScalar pelRot, junk1, junk2;
-		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
-		// convert rad to deg:
-		pelRot = pelRot * 180 / M_PI;
-
-		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
-		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
-		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-		double rightTargZ = initPelvisHeight / 1.5;
-		double rightTargX = -height_pelvis / 60;
-
-		
-		// this version doesn't take height into account for scaffolding.
-		cout << "===========================" << endl;
-		cout << "Left target (X,Z) = (" << leftTargX << ", " << leftTargZ << ")" << endl;
-		cout << "Right target (X,Z) = (" << rightTargX << ", " << rightTargZ << ")" << endl;
-		cout << "Initial pelvis height = " << initPelvisHeight << endl;
-		cout << "Left foot (X,Z) = (" << lfPos.x() << ", " << lfPos.z() << ")" << endl;
-		cout << "Right foot (X,Z) = (" << rfPos.x() << ", " << rfPos.z() << ")" << endl;
-		cout << "Current pelvis HEIGHT = " << pelPos.y() << endl;
-		cout << "Current pelvis ROTATION = " << pelRot << " degrees." << endl;
-		double result = (1-abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1) + pelPos.y() / initPelvisHeight;
-		//double result = (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-		cout << "Current fitness = " << result / 6 << endl; //all 5 members of expression at maximum reach 1 each, this is normalization. 
-	}
-#endif
 
 //NOt optimized, not completely debugged socket connection to MATLAB
 #ifdef DIRECT
@@ -1172,7 +1186,7 @@ void RagdollDemo::initPhysics()
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
 	SimulationStep = 0; //time step counter to exit after desired # of steps
 	tempFitness = 0;
-	activityIndex = 0;//a proxy for robot's activity during the simulation. 
+ 
 #ifdef NEURON
 	tsCounter = 0;
 #endif
@@ -1232,6 +1246,19 @@ void RagdollDemo::initPhysics()
 		}
 	}
 #endif
+
+#ifdef COM
+	//intialize 2d vector for COM coordinates:
+	for (int i = 0; i < 3; i++)
+	{
+		COMpath.push_back(vector<double>());
+		for (int j = 0; j < maxStep; j++)
+		{
+			COMpath[i].push_back(double());
+		}
+	}
+#endif
+
 	//READ WEIGHTS:
 	// from input file into var called 'w': 
 	load_data(m_inputFileName, w);
@@ -1289,7 +1316,8 @@ void RagdollDemo::initPhysics()
 #endif //CREATE_GROUND_COLLISION_OBJECT
 
 	}
-
+	//Correct default gravity setting to more correct 9.81 value
+	m_dynamicsWorld->setGravity(btVector3(0, -9.81, 0));
 	// Spawn one ragdoll
 	btVector3 startOffset(1,0.5,0);
 	spawnRagdoll(startOffset);
@@ -1475,14 +1503,19 @@ void RagdollDemo::clientMoveAndDisplay()
 
 				m_dynamicsWorld->stepSimulation(1.f / 60.f,0);
 				tempFitness += m_ragdolls[0]->onlineFitness();
-				
-#ifdef DEBUG
-				//get rotation of pelvis around the Y-axis:
-				btScalar pelvisRot, junk10, junk20;
-				m_ragdolls[0]->m_bodies[BODYPART_PELVIS]->getCenterOfMassTransform().getBasis().getEulerZYX(junk10, pelvisRot, junk20);
-				cout << "Pelvis is initially at " << pelvisRot * 180 / M_PI << " degrees." << endl;
-				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
-				m_ragdolls[0]->printFitness();
+#ifdef COM
+				btVector3 thisCOM = m_ragdolls[0]->wholeBodyCOM();
+				COMpath[0][SimulationStep] = thisCOM.x();
+				COMpath[1][SimulationStep] = thisCOM.y();
+				COMpath[2][SimulationStep] = thisCOM.z();
+				//cout << "COM.x = " << thisCOM.x() << ", COM.y = " << thisCOM.y() << ", COM.z = " << thisCOM.z() << endl;
+				// An attempt to also draw a sphere where COM belongs
+				//virtual void renderCOM()
+				//{
+				//	extern GLDebugDrawer gDebugDrawer;
+				//	GlutDemoApplication::renderCOM();
+				//	gDebugDrawer.drawSphere(thisCOM, 10.0, btVector3(0.75, 0.75, 0.));
+				//}
 #endif
 
 #ifdef JOINT
@@ -1511,6 +1544,28 @@ void RagdollDemo::clientMoveAndDisplay()
 				{
 					double fitval = tempFitness/SimulationStep;
 					cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
+#ifdef COM
+					ofstream COMoutputFile;
+					COMoutputFile.open("com.txt", ios_base::app);
+					for (int m = 0; m < SimulationStep; m++)
+					{
+						COMoutputFile << COMpath[0][m]<< " " << COMpath[1][m] << " " << COMpath[2][m] << endl;
+					}
+					COMoutputFile.close();
+
+					// Store target locations for plotting
+					ofstream TargOutputFile;
+					TargOutputFile.open("targets.txt", ios_base::app);
+
+					btVector3 leftTargPos = m_ragdolls[0]->getLeftTargPos();
+					btVector3 rightTargPos = m_ragdolls[0]->getRightTargPos();
+
+					TargOutputFile << leftTargPos.x() << " " << leftTargPos.y() << " " << leftTargPos.z() << endl;
+					TargOutputFile << rightTargPos.x() << " " << rightTargPos.y() << " " << rightTargPos.z() << endl;
+
+					TargOutputFile.close();
+
+#endif
 					getchar();
 					exit(0);
 				}

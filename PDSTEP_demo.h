@@ -105,9 +105,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 300;
+	int maxStep = 200;
 #else
-	int maxStep = 300;//this is to debug only, remove in final version.
+	int maxStep = 200;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -199,7 +199,10 @@ public:
 	int tsCounter;
 #endif
 
-	double activityIndex;
+	// if COM needs to be extracted:
+#ifdef COM
+	vector<vector<double>> COMpath; //rows x, y, z; columns - simulation steps
+#endif
 
 	RagdollDemo();
     // end "added to demo"
