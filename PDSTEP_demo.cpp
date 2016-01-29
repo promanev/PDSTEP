@@ -724,44 +724,75 @@ public:
 		//return result / 5;
 	}
 
-	double onlineFitness()
+	double onlineFitness(int SimulationStep, int maxStep)
 	{
-		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
-		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
-		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
-		btGeneric6DofConstraint * rightAnkleJoint = m_joints[JOINT_RIGHT_ANKLE];
-
-		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
-		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
-		btVector3 pelPos = pelvis->getCenterOfMassPosition();
-		//get rotation of pelvis around the Y-axis:
-		btScalar pelRot, junk1, junk2;
-		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
-		//double pelRot = rightAnkleJoint->getRotationalLimitMotor(2)->m_currentPosition;
-		double rightAnkleAPRot = rightAnkleJoint->getRotationalLimitMotor(2)->m_currentPosition;
-		double rightAnkleMLRot = rightAnkleJoint->getRotationalLimitMotor(1)->m_currentPosition;
+		btRigidBody * p_swingFoot;
+		btRigidBody * p_stanceFoot;
+		btGeneric6DofConstraint * p_stanceFootAnkleJoint;
 
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
-		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
-		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-											  //double rightTargZ = initPelvisHeight / 1.5;
-		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
-		double rightTargX = -height_pelvis / 60;
+		double swingTargX;
+		double swingTargZ = initPelvisHeight / 1.5;
+		double swingFootInitZ = 0;
+		double stanceTargX;
+		double stanceTargZ;
+
+		if (SimulationStep < maxStep / 2)
+		{
+			//cout << "Since SimStep " << SimulationStep << " < maxStep/2 " << maxStep / 2 << ", I am using FitFcn 1 (first half of simulation)." << endl;
+			p_swingFoot = m_bodies[BODYPART_LEFT_FOOT];
+			p_stanceFoot = m_bodies[BODYPART_RIGHT_FOOT];
+			p_stanceFootAnkleJoint = m_joints[JOINT_RIGHT_ANKLE];
+			swingTargX = height_pelvis / 60;
+			stanceTargX = - height_pelvis / 60;
+			stanceTargZ = 0;
+		}
+		else
+		{
+			//cout << "Since SimStep " << SimulationStep << " > maxStep/2 " << maxStep / 2 << ", I am using FitFcn 2 (second half of simulation)." << endl;
+			p_swingFoot = m_bodies[BODYPART_RIGHT_FOOT];
+			p_stanceFoot = m_bodies[BODYPART_LEFT_FOOT];
+			p_stanceFootAnkleJoint = m_joints[JOINT_LEFT_ANKLE];
+			swingTargX =  - height_pelvis / 60;
+			stanceTargX = height_pelvis / 60;
+			stanceTargZ = initPelvisHeight / 1.5;
+		}
+
+		btRigidBody * p_pelvis = m_bodies[BODYPART_PELVIS];
+		
+		// Get COM positions:
+		btVector3 swingFootPos = p_swingFoot->getCenterOfMassPosition();
+		btVector3 stanceFootPos = p_stanceFoot->getCenterOfMassPosition();
+		btVector3 pelPos = p_pelvis->getCenterOfMassPosition();
+
+		//get rotation of pelvis around the Y-axis:
+		btScalar pelRot, junk1, junk2;
+		p_pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
+		//get joint angles for ankles
+		double stanceFootAnkleAPRot = p_stanceFootAnkleJoint->getRotationalLimitMotor(2)->m_currentPosition;
+		double stanceFootAnkleMLRot = p_stanceFootAnkleJoint->getRotationalLimitMotor(1)->m_currentPosition;
+
+		//values to compare online values of rotation:
 		double initPelvRot = 0;
 		double initAnklRotAP = 0;
 		double initAnklRotML = 0;
-		double scalingConst = 5;
-
+		
+		//Ensure that only forward swing foot movement is rewarded:
+		if (swingFootPos.z() < 0) swingFootPos = btVector3(swingFootPos.x(), swingFootPos.y(), btScalar(0));
+		
 		// Fitness members:
-		double pelvRotMember = 1 / (1 + abs(initPelvRot - pelRot));
-		double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - rightAnkleAPRot));
-		double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - rightAnkleAPRot));
-		double targetMemberX = 1 / (1 + scalingConst * abs(leftTargX - lfPos.x()));
-		double targetMemberZ = 1 / (1 + scalingConst * abs(leftTargZ - lfPos.z()));
-		double stanceMemberX = 1 / (1 + abs(rightTargX - rfPos.x()));
-		double stanceMemberZ = 1 / (1 + abs(rightTargZ - rfPos.z()));
-		double pelvHeightMember = 1 / (1 + abs(initPelvisHeight - pelPos.y()));
+		double pelvRotMember = 1 / (1 + abs(initPelvRot - pelRot)); //cout << "pelvRotMember = " << pelvRotMember << endl;
+		double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - stanceFootAnkleAPRot)); //cout << "stanceAnklRotMemberAP = " << stanceAnklRotMemberAP << endl;
+		double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - stanceFootAnkleMLRot)); //cout << "stanceAnklRotMemberML = " << stanceAnklRotMemberML << endl;
+		double targetMemberX = 1 / (1 + abs(swingTargX - swingFootPos.x()));	//cout << "targetMemberX = " << targetMemberX << endl;
+ 		double targetMemberZ = 1 / (1 + abs( (swingTargZ - swingFootPos.z()) / (swingFootPos.z() - swingFootInitZ) )); //cout << "targetMemberZ = " << targetMemberZ << endl;
+		double stanceMemberX = 1 / (1 + abs(stanceTargX - stanceFootPos.x())); //cout << "stanceMemberX = " << stanceMemberX << endl;
+		double stanceMemberZ = 1 / (1 + abs(stanceTargZ - stanceFootPos.z())); //cout << "stanceMemberZ = " << stanceMemberZ << endl;
+		double pelvHeightMember = 1 / (1 + abs(initPelvisHeight - pelPos.y())); //cout << "pelvHeightMember = " << pelvHeightMember << endl;
 		double result = pelvRotMember * pelvHeightMember * stanceAnklRotMemberAP * stanceAnklRotMemberML * targetMemberX * targetMemberZ * stanceMemberX*stanceMemberZ;
+		//cout << "swingTargZ = " << swingTargZ << ", swingFootPos.z() = " << swingFootPos.z() << ", swingFootInitZ = " << swingFootInitZ << endl;
+		//cout << " Fitness of this SimStep is = " << result << endl;
+		//cout << "---------------------------------" << endl;
 		return result;
 
 	}
@@ -1502,7 +1533,7 @@ void RagdollDemo::clientMoveAndDisplay()
 				// END UPDATE MOTORS
 
 				m_dynamicsWorld->stepSimulation(1.f / 60.f,0);
-				tempFitness += m_ragdolls[0]->onlineFitness();
+				tempFitness += m_ragdolls[0]->onlineFitness(SimulationStep, maxStep);
 #ifdef COM
 				btVector3 thisCOM = m_ragdolls[0]->wholeBodyCOM();
 				COMpath[0][SimulationStep] = thisCOM.x();

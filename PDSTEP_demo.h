@@ -105,9 +105,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 200;
+	int maxStep = 400;
 #else
-	int maxStep = 200;//this is to debug only, remove in final version.
+	int maxStep = 400;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -232,7 +232,7 @@ public:
 		// Call the parent method.
 		GlutDemoApplication::renderme();
 
-		//Makes a sphere with 0.2 radius around every contact with the ground, third argument is color in RGB (1,0,0)
+		//Makes a sphere with 0.2 radius around every contact with the ground, third argument is color in RGB - grey
 		for (int i = 0; i < circleCount; i++)
 		{
 			if (touches[i])
@@ -264,16 +264,20 @@ public:
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
 		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-		double rightTargZ = 0; // have the right leg stay on initial position
+		double rightTargZ = initPelvisHeight / 1.5; // now have both feet reach out for those targets.
 		double rightTargX = -height_pelvis / 60;
 		double leftTargY = 0.15;
 		double rightTargY = 0.15;
 
 		btVector3 left = btVector3(btScalar(leftTargX), btScalar(leftTargY), btScalar(leftTargZ));
 		btVector3 right = btVector3(btScalar(rightTargX), btScalar(rightTargY), btScalar(rightTargZ));
+		btVector3 leftInitPos = btVector3(btScalar(height_pelvis / 60), btScalar(0.15), btScalar(0));
+		btVector3 rightInitPos = btVector3(btScalar(-height_pelvis / 60), btScalar(0.15), btScalar(0));
 
-		gDebugDrawer.drawSphere(left, 0.4, btVector3(0., 1., 0.));
-		gDebugDrawer.drawSphere(right, 0.4, btVector3(0., 0., 1.));
+		gDebugDrawer.drawSphere(left, 0.4, btVector3(0., 1., 1.));
+		gDebugDrawer.drawSphere(right, 0.4, btVector3(1., 1., 0.));
+		gDebugDrawer.drawSphere(leftInitPos, 0.4, btVector3(0.7, 1., 1.));
+		gDebugDrawer.drawSphere(rightInitPos, 0.4, btVector3(1., 1., 0.7));
 #endif
 
 	}
