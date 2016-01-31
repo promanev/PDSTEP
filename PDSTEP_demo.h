@@ -124,6 +124,7 @@ public:
 	int touches[9]; //record if corresponding body part is in contact, +1 to touches bcuz ground is an object too
 	btVector3 touchPoints[9];//locations of contact points
 	int bodyCount = sizeof(IDs) / sizeof(IDs[0]);
+	btVector3 forces[9];
 #endif
 #endif
 
@@ -203,6 +204,8 @@ public:
 #ifdef COM
 	vector<vector<double>> COMpath; //rows x, y, z; columns - simulation steps
 #endif
+	vector<btVector3> leftFootForce;
+	vector<btVector3> rightFootForce;
 
 	RagdollDemo();
     // end "added to demo"
