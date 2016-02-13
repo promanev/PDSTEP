@@ -79,6 +79,9 @@ using namespace std;
 #define KNEE_ML_L 0
 #define KNEE_ML_H 0
 
+#define INPUT_TAU 2.0
+#define HIDDEN_TAU 2.0
+#define OUTPUT_TAU 2.0
 
 class RagDoll
 {
@@ -278,6 +281,7 @@ public:
 	btRigidBody* m_bodies[BODYPART_COUNT];
 	// btTypedConstraint* m_joints[JOINT_COUNT]; // replaced by line below
 	btGeneric6DofConstraint* m_joints[JOINT_COUNT];
+	btJointFeedback fg;
 	// END USED TO BE PRIVATE
 
 	RagDoll (btDynamicsWorld* ownerWorld, const btVector3& positionOffset, int* IDs)
@@ -501,6 +505,8 @@ public:
 		joint->setLimit(3, 0, 0);
 		joint->setLimit(4, btScalar(MLLow), btScalar(MLHigh));
 		joint->setLimit(5, btScalar(APLow), btScalar(APHigh));
+		joint->enableFeedback(TRUE);
+		joint->setJointFeedback(&fg);
 		m_joints[jointIndex] = joint;
 		joint->setDbgDrawSize(CONSTRAINT_DEBUG_SIZE);
 
@@ -552,6 +558,105 @@ public:
 		saveFile.close();
 	}
 
+	void save_1DbtV3(vector<btVector3> data, string filename)
+	{
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
+		saveFile << setprecision(4);
+		for (unsigned i = 0; i < data.size(); i++)
+		{
+			saveFile << data.at(i).x() << " " << data.at(i).y() << " " << data.at(i).z() << " " << endl;
+		}
+
+		saveFile.close();
+	}
+
+	void save_1DInt(vector<int> data, string filename)
+	{
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
+		saveFile << setprecision(4);
+		for (unsigned i = 0; i < data.size(); i++)
+		{
+			saveFile << data.at(i) << endl;
+		}
+
+		saveFile.close();
+	}
+	
+	void save_2DDbl(vector<vector<double>> data, string filename)
+	{
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
+		saveFile << setprecision(4);
+		for (unsigned i = 0; i < data.size(); i++)
+		{
+			for (unsigned j = 0; j < data.at(i).size(); j++)
+			{
+				saveFile << data.at(i).at(j) << " ";
+			}
+			saveFile << endl;
+		}
+
+		saveFile.close();
+	}
+
+	void save_2DbtV3(vector<vector<btVector3>> data, string filename)
+	{
+		ofstream saveFile;
+		saveFile.open(filename, ios_base::app);
+		saveFile << setprecision(4);
+		for (unsigned i = 0; i < data.size(); i++)
+		{
+			for (unsigned j = 0; j < data.at(i).size(); j++)
+			{
+				saveFile << data.at(i).at(j).x() << " " << data.at(i).at(j).y() << " " << data.at(i).at(j).z() << " ";
+			}
+			saveFile << endl;
+		}
+
+		saveFile.close();
+	}
+
+	//// save one-dimensional vector of any type:
+	//template <typename T>
+	//void save_1DFile(T data, string filename)
+	//{
+	//	ofstream saveFile;
+	//	saveFile.open(filename, ios_base::app);
+	//	cout << "Saving into " << filename << endl;
+	//	cout << "Vector size = " << data.size() << ", and sizeof(vector) = " << sizeof(data) << endl;
+	//	getchar();
+	//	saveFile << setprecision(4);
+	//	for (unsigned i = 0; i < data.size(); i++)
+	//	{
+	//		cout << "Step = " << i << ". Value saved = " << data.at(i) << endl;
+	//		cout << "Step = " << i << ". Alt value saved = " << (* data.at(i)) << endl;
+	//		saveFile << data.at(i) << endl;
+	//		getchar();
+	//	}
+	//	saveFile.close();
+	//}
+	//// save two-dimensional vector of any type:
+	//template <typename T>
+	//void save_2DFile(T data, string filename)
+	//{
+	//	ofstream saveFile;
+	//	saveFile.open(filename, ios_base::app);
+	//	saveFile << setprecision(4);
+	//	for (unsigned i = 0; i < data.size(); i++)
+	//	{
+	//		for (unsigned j = 0; j < data.at(i).size(); j++)
+	//		{
+	//			saveFile << data.at(i).at(j) << " ";
+	//		}
+	//		
+	//		saveFile << endl;
+	//	}
+
+	//	saveFile.close();
+	//}
+
 	//for saving just one double value into a text file
 	void save_1by1_file(double data, string fileName)
 	{
@@ -561,69 +666,15 @@ public:
 		outputFile.close();
 	}
 
-	// SAVE BODY PART POSITION (at the end of simulation):
-	void Save_Position(int index, unsigned char coordinate, string FileName)
+	// GET CoM POSITION of a body part
+	btVector3 getCOMposition(int bodyIndex)
 	{
-		btRigidBody *body = m_bodies[index];
-		btVector3 EndPosition = body->getCenterOfMassPosition();
-		// path for location of .txt file with coordinate is hardcoded in here:
-		//string path = "C:\\Users\\Lunar\\Documents\\[!Library]\\[!!!Phd]\\[!!UVM]\\[!!!!Lab]\\[!!!Robotics]\\[!Human modeling]\\bullet-2.81-rev2613\\" + FileName + ".txt";
-		ofstream outputFile;
-		outputFile.open(FileName, ios_base::app);
-		switch (coordinate)
-		{
-		case 'x':
-		{
-			outputFile << EndPosition.x() << endl;
-			break;
-		}
-
-		case 'y':
-		{
-			outputFile << EndPosition.y() << endl;
-			break;
-		}
-
-		case 'z':
-		{
-			outputFile << EndPosition.z() << endl;
-			break;
-		}
-		default:
-			break;
-		}
-		outputFile.close();
-	}
-
-	// GET CoM POSITION
-	// have to specify axis:
-	double xCOM(int body, unsigned char axis_dir)
-	{
-		btRigidBody * pointer = m_bodies[body];
+		btRigidBody * pointer = m_bodies[bodyIndex];
 		btVector3 position = pointer->getCenterOfMassPosition();
-		switch (axis_dir)
-		{
-		case 'x':
-		{
-			return position.x(); 
-			break;
-		}
-		case 'y':
-		{
-			return position.y();
-			break;
-		}
-		case 'z':
-		{
-			return position.z();
-			break;
-		}
-		default:
-			break;
-		}
+		return position;
 		
 	}
-
+	// Get COM position of the whole body
 	btVector3 wholeBodyCOM()
 	{
 		double thisMass = 0;
@@ -654,62 +705,20 @@ public:
 		return wholeCOM;
 	}
 
-
-	btVector3 getLeftTargPos()
+	vector<btVector3> getTargPos()
 	{
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
-		btScalar TargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
-		btScalar TargY = 0.3 + length_foot / 120;
-		btScalar TargX = height_pelvis / 60;//
-		return btVector3(TargX, TargY, TargZ);
-	}
+		btScalar leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
+		btScalar leftTargY = 0.3 + length_foot / 120;
+		btScalar leftTargX = height_pelvis / 60;//
 
-	btVector3 getRightTargPos()
-	{
-		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
-		btScalar TargZ = 0; //step length = 1/3 of body height, just like in humans
-		btScalar TargY = 0.3 + length_foot / 120;
-		btScalar TargX = - height_pelvis / 60;//
-		return btVector3(TargX, TargY, TargZ);
-	}
-
-
-	// use 0 if robot fell, 1 - if it didn't fall
-	double fitness(bool isUprightFlag)
-	{
-		btRigidBody * leftFoot = m_bodies[BODYPART_LEFT_FOOT];
-		btRigidBody * rightFoot = m_bodies[BODYPART_RIGHT_FOOT];
-		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
-
-		btVector3 lfPos = leftFoot->getCenterOfMassPosition();
-		btVector3 rfPos = rightFoot->getCenterOfMassPosition();
-		btVector3 pelPos = pelvis->getCenterOfMassPosition();
-		//get rotation of pelvis around the Y-axis:
-		btScalar pelRot, junk1, junk2;
-		pelvis->getCenterOfMassTransform().getBasis().getEulerZYX(junk1, pelRot, junk2);
-		// convert rad to deg:
-		pelRot = pelRot * 180 / M_PI;
-
-		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
-		double leftTargZ = initPelvisHeight / 1.5; //step length = 1/3 of body height, just like in humans
-		double leftTargX = height_pelvis / 60;// there should be no movement along X-axis, so the foot should maintain its initial pos along x-axis
-		//double rightTargZ = initPelvisHeight / 1.5;
-		double rightTargZ = 0; //don't move the right leg, stay at the initial position. 
-		double rightTargX = - height_pelvis / 60;
-
-		if (isUprightFlag == 1)
-		{
-			double result = 0.33334*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.33333*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.33333*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
-			return result / 3;//all members of expression at maximum reach 1 each, this is normalization.
-		}
-		else // if robot fell - lower the fitness:
-		{
-			double result = 0.33334*(1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + 0.33333*(-0.1*abs(rightTargX - rfPos.x()) + 1) + 0.33333*(-0.1*abs(rightTargZ - rfPos.z()) + 1);
-			return result / 9;
-		}
-
-		//double result = (1 - abs(pelRot / 90)) + (-0.1*abs(leftTargX - lfPos.x()) + 1) + (-0.1*abs(leftTargZ - lfPos.z()) + 1) + (-0.1*abs(rightTargX - rfPos.x()) + 1) + (-0.1*abs(rightTargZ - rfPos.z()) + 1);
-		//return result / 5;
+		btScalar rightTargZ = 0; //step length = 1/3 of body height, just like in humans
+		btScalar rightTargY = 0.3 + length_foot / 120;
+		btScalar rightTargX = -height_pelvis / 60;//
+		vector<btVector3> targPos;
+		targPos.push_back(btVector3(leftTargX, leftTargY, leftTargZ));
+		targPos.push_back(btVector3(rightTargX, rightTargY, rightTargZ));
+		return targPos;
 	}
 
 	double onlineFitness(int SimulationStep, int maxStep)
@@ -720,9 +729,11 @@ public:
 
 		double initPelvisHeight = 0.3 + length_foot / 60 + height_leg / 30;
 		double swingTargX;
+		double swingTargY = 0.3 + length_foot / 120; // initial feet COM height
 		double swingTargZ = initPelvisHeight / 1.5;
 		double swingFootInitZ = 0;
 		double stanceTargX;
+		double stanceTargY = 0.3 + length_foot / 120;
 		double stanceTargZ;
 
 		if (SimulationStep < maxStep / 2)
@@ -767,17 +778,20 @@ public:
 		
 		//Ensure that only forward swing foot movement is rewarded:
 		if (swingFootPos.z() < 0) swingFootPos = btVector3(swingFootPos.x(), swingFootPos.y(), btScalar(0));
-		
+		if (pelPos.y() > initPelvisHeight) pelPos = btVector3(pelPos.x(), initPelvisHeight, pelPos.z());
 		// Fitness members:
 		double pelvRotMember = 1 / (1 + abs(initPelvRot - pelRot)); //cout << "pelvRotMember = " << pelvRotMember << endl;
-		double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - stanceFootAnkleAPRot)); //cout << "stanceAnklRotMemberAP = " << stanceAnklRotMemberAP << endl;
-		double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - stanceFootAnkleMLRot)); //cout << "stanceAnklRotMemberML = " << stanceAnklRotMemberML << endl;
+		//double stanceAnklRotMemberAP = 1 / (1 + abs(initAnklRotAP - stanceFootAnkleAPRot)); //cout << "stanceAnklRotMemberAP = " << stanceAnklRotMemberAP << endl;
+		//double stanceAnklRotMemberML = 1 / (1 + abs(initAnklRotML - stanceFootAnkleMLRot)); //cout << "stanceAnklRotMemberML = " << stanceAnklRotMemberML << endl;
 		double targetMemberX = 1 / (1 + abs(swingTargX - swingFootPos.x()));	//cout << "targetMemberX = " << targetMemberX << endl;
- 		double targetMemberZ = 1 / (1 + abs( (swingTargZ - swingFootPos.z()) / (swingFootPos.z() - swingFootInitZ) )); //cout << "targetMemberZ = " << targetMemberZ << endl;
+		double targetMemberY = 1 / (1 + abs(swingTargY - swingFootPos.y()));
+		double targetMemberZ = 1 / (1 + abs( (swingTargZ - swingFootPos.z()) / (swingFootPos.z() - swingFootInitZ) )); //cout << "targetMemberZ = " << targetMemberZ << endl;
 		double stanceMemberX = 1 / (1 + abs(stanceTargX - stanceFootPos.x())); //cout << "stanceMemberX = " << stanceMemberX << endl;
+		double stanceMemberY = 1 / (1 + abs(stanceTargY - stanceFootPos.y()));
 		double stanceMemberZ = 1 / (1 + abs(stanceTargZ - stanceFootPos.z())); //cout << "stanceMemberZ = " << stanceMemberZ << endl;
-		double pelvHeightMember = 1 / (1 + abs(initPelvisHeight - pelPos.y())); //cout << "pelvHeightMember = " << pelvHeightMember << endl;
-		double result = pelvRotMember * pelvHeightMember * stanceAnklRotMemberAP * stanceAnklRotMemberML * targetMemberX * targetMemberZ * stanceMemberX*stanceMemberZ;
+		double pelvHeightMember = 1 / (1 + abs( (initPelvisHeight - pelPos.y())  )); //cout << "pelvHeightMember = " << pelvHeightMember << endl;
+		//double result = pelvRotMember * pelvHeightMember * stanceAnklRotMemberAP * stanceAnklRotMemberML * targetMemberX * targetMemberY * targetMemberZ * stanceMemberX * stanceMemberY * stanceMemberZ;
+		double result = pelvRotMember * pelvHeightMember * targetMemberX * targetMemberY * targetMemberZ * stanceMemberX * stanceMemberY * stanceMemberZ;
 		//cout << "swingTargZ = " << swingTargZ << ", swingFootPos.z() = " << swingFootPos.z() << ", swingFootInitZ = " << swingFootInitZ << endl;
 		//cout << " Fitness of this SimStep is = " << result << endl;
 		//cout << "---------------------------------" << endl;
@@ -786,31 +800,90 @@ public:
 	}
 	
 	// detects if the pelvis is fallign below certain height, exits simulation, and saves accumulated fitness up to that simulation step
-	void isUpright(double tempFitness, int SimulationStep)
+	void isUpright(double tempFitness, int maxStep, int SimulationStep)
 	{
 		btRigidBody * pelvis = m_bodies[BODYPART_PELVIS];
 		btVector3 pelPos = pelvis->getCenterOfMassPosition();
 		double avgTempFitness;
 
-		if (pelPos.y() < PELV_HEIGHT * 0.85)
+		if (pelPos.y() < PELV_HEIGHT * 0.75)
 		{
-			avgTempFitness = tempFitness / SimulationStep;
-			save_1by1_file(avgTempFitness, "fit.txt");
+			//avgTempFitness = tempFitness / maxStep;
+			avgTempFitness = tempFitness;
+			//save_1by1_file<double>(avgTempFitness, "fit.txt");
+			save_1by1_file(avgTempFitness,"fit.txt");
 #ifndef TRAIN
-			cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 85% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.85 << endl;
-			cout << "Sim.Step: " << SimulationStep << ". tempFitness = " << tempFitness << ", avgTempFitness = " << avgTempFitness << endl;
+			cout << "Exit early due to fall. Curr height: " << pelPos.y() << " < 75% of Init height " << PELV_HEIGHT << " = " << PELV_HEIGHT*0.75 << endl;
+			cout << "Sim.Step: " << SimulationStep << " out of " << maxStep << ". tempFitness = " << tempFitness << ", avgTempFitness = " << avgTempFitness << endl;
 			getchar();
 #endif
 			exit(0);
 		}
 		return;
 	}
+
+	
 }; //END OF RagDoll CLASS
 
+// Alternative version of collision detection from:
+// http://bulletphysics.org/Bullet/phpBB3/viewtopic.php?f=9&t=2568&hilit=contact+info
+// after experimenting figuren out - it does the same.
+//static RagdollDemo * ragdollDemo; //for processing touches
+//void myTickCallback(btDynamicsWorld *world, btScalar timeStep) {
+//	int
+//		* ID1, *ID2;
+//
+//	if (world)
+//		world->performDiscreteCollisionDetection();
+//	int i;
+//	///one way to draw all the contact points is iterating over contact manifolds / points:
+//	int numManifolds = world->getDispatcher()->getNumManifolds();
+//	//cout << "CP# = " << numManifolds << endl;
+//	for (i = 0; i<numManifolds; i++)
+//	{
+//		btPersistentManifold* contactManifold = world->getDispatcher()->getManifoldByIndexInternal(i);
+//		btCollisionObject* obA = static_cast<btCollisionObject*>((void*)contactManifold->getBody0());
+//		btCollisionObject* obB = static_cast<btCollisionObject*>((void*)contactManifold->getBody1());
+//
+//		ID1 = static_cast<int * >(obA->getUserPointer());
+//		ID2 = static_cast<int * >(obB->getUserPointer());
+//
+//		int numContacts = contactManifold->getNumContacts();
+//		for (int j = 0; j<numContacts; j++)
+//		{
+//			btManifoldPoint& contactPoint = contactManifold->getContactPoint(j);
+//			btVector3 normal = contactPoint.m_normalWorldOnB;
+//			btScalar angleX = normal.angle(btVector3(1, 0, 0));
+//			btScalar angleY = normal.angle(btVector3(0, 1, 0));
+//			btScalar angleZ = normal.angle(btVector3(0, 0, 1));
+//			btScalar impulseX = contactPoint.m_appliedImpulse*cos(angleX);
+//			btScalar impulseY = contactPoint.m_appliedImpulse*cos(angleY);
+//			btScalar impulseZ = contactPoint.m_appliedImpulse*cos(angleZ);
+//			btScalar forceX = impulseX / (timeStep);
+//			btScalar forceY = impulseY / (timeStep);
+//			btScalar forceZ = impulseZ / (timeStep);
+//
+//			ragdollDemo->touches[*ID1] = 1;
+//			ragdollDemo->touches[*ID2] = 1;
+//			ragdollDemo->touchPoints[*ID1] = contactPoint.m_positionWorldOnB;
+//			ragdollDemo->touchPoints[*ID2] = contactPoint.m_positionWorldOnB;
+//
+//			ragdollDemo->forces[*ID1] = btVector3(impulseX, impulseY, impulseZ);
+//			ragdollDemo->forces[*ID2] = btVector3(impulseX, impulseY, impulseZ);
+//
+//			//if (!(*ID1 == 8 && *ID2 == 7))
+//			//{
+//			//	printf("ID1 = %d, ID2 = %d\n", *ID1, *ID2);
+//			//	printf("Force: %8.10f %8.10f %8.10f \n", impulseX, impulseY, impulseZ);
+//			//}
+//		}
+//	}
+//}
+//
+//
+//// BINARY TOUCH SENSOR SYSTEM:
 static RagdollDemo * ragdollDemo; //for processing touches
-
-// BINARY TOUCH SENSOR SYSTEM:
-// detects if two bodies are in contact and assigns 1's to respective values in touches[number of body parts + 1 for ground]
+//// detects if two bodies are in contact and assigns 1's to respective values in touches[number of body parts + 1 for ground]
 bool myContactProcessedCallback(btManifoldPoint& cp,
 	void * body0, void * body1)
 {
@@ -860,6 +933,9 @@ bool myContactProcessedCallback(btManifoldPoint& cp,
 	return false;
 }
 
+
+
+
 // READING FROM LOCAL DIRECTORY:
 //how to read is directed here:
 void load_data(const string& file_name, vector<vector<double> >& data) {
@@ -882,6 +958,14 @@ void load_data(const string& file_name, vector<vector<double> >& data) {
 
 // hardcode the file name here:
 RagdollDemo::RagdollDemo() :m_inputFileName("weights.txt")
+#ifdef EV_TAU
+, m_inputTauFileName("tau.txt")
+//{}
+#endif
+#ifdef TAU_SWITCH
+, m_inputTauFileName("tau.txt")
+#endif
+
 {}
 // execute reading:
 void RagdollDemo::initParams(const std::string& inputFileName)
@@ -889,54 +973,171 @@ void RagdollDemo::initParams(const std::string& inputFileName)
 	if (!inputFileName.empty())
 		m_inputFileName = inputFileName;
 }
-// END READING WEIGHTS LOCALLY
+
+//READ TAU
+#ifdef EV_TAU
+void RagdollDemo::initParams1(const std::string& inputFileName)
+{
+	if (!inputFileName.empty())
+		m_inputTauFileName = inputFileName;
+}
+#endif
+
+#ifdef TAU_SWITCH
+void RagdollDemo::initParams1(const std::string& inputFileName)
+{
+	if (!inputFileName.empty())
+		m_inputTauFileName = inputFileName;
+}
+#endif
+
+#ifdef TAU_SWITCH
+vector<vector<double>> RagdollDemo::flipTau(vector<vector<double>> tau)
+{
+	vector<vector<double>> tempTau;
+	//initialize tempTau structure:
+	for (unsigned i = 0; i < tau.size(); i++)
+	{
+		tempTau.push_back(vector<double>());
+		for (unsigned j = 0; j < tau[i].size(); j++)
+		{
+			tempTau[i].push_back(double());
+		}
+	}
+	//populate tempTau with reversed data:
+	//// input layer remains the same:
+	//tempTau[0][0] = tau[0][0];
+	//tempTau[0][1] = tau[0][1];
+	// input layer reverses too:
+	tempTau[0][0] = tau[0][1];
+	tempTau[0][1] = tau[0][0];
+	// flip hidden neurons' tau:
+	tempTau[1][0]=tau[1][1];
+	tempTau[1][1]=tau[1][0];
+	// flip output neurons
+	//cout << "tau[2].size is " << tau[2].size() << endl;
+	for (unsigned k = 0; k < tau[2].size(); k=k+4)
+	{
+		//cout << "k = " << k << endl;
+		tempTau[2][k] = tau[2][k + 2];
+		tempTau[2][k+1] = tau[2][(k + 1) + 2];
+		
+	}
+
+	for (unsigned m = 2; m < tau[2].size(); m = m + 4)
+	{
+		//cout << "m = " << m << endl;
+		tempTau[2][m] = tau[2][m - 2];
+		tempTau[2][m + 1] = tau[2][(m + 1) - 2];
+
+	}
+
+//#ifndef TRAIN
+//	//to debug the flip:
+//	for (unsigned i = 0; i < tau.size(); i++)
+//	{
+//		cout << "Layer " << i << " of original tau: ";
+//		for (unsigned j = 0; j < tau[i].size(); j++)
+//		{
+//			cout << tau[i][j] << " ";
+//		}
+//		cout << endl;
+//
+//		cout << "Layer " << i << " of flipped tau: ";
+//		for (unsigned j = 0; j < tau[i].size(); j++)
+//		{
+//			cout << tempTau[i][j] << " ";
+//		}
+//		cout << endl;
+//	}
+//#endif
+
+	return tempTau;
+
+}
+#endif
 
 //CTRNN CODE:
 //========================================================================================================
-
+#ifdef EV_TAU
+vector<vector<double>> RagdollDemo::euler(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#else
+#ifdef TAU_SWITCH
 // (update function, initial value, time1, time2, step size, time constant)
-vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+//vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+vector<vector<double>> RagdollDemo::euler(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#else
+vector<vector<double>> RagdollDemo::euler(double neural_step, double h, vector<double> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#endif
+#endif
 {
-#ifdef NEURON
-	//vector for neuronal values:
-	vector<vector<vector<double>>> tempHist;//layer * neuron * time
-	//to export neuron vals, initialize a temp 3d vector
-	for (int layer = 0; layer < 3; layer++)
-	{
-		tempHist.push_back(vector<vector<double>>());
-		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
-		{
-			tempHist[layer].push_back(vector<double>());
-			for (int time = 0; time < (neural_step/h); time++)
-			{
-				tempHist[layer][neuron].push_back(double());
-			}
-		}
-	}
-#endif	
 	// Separate weight matrices:
 	vector<double> temp_row;
 	vector<vector<double>> wIJ, wJK;
+
+	//find the max positive value and min negative value to cale weight matrix to [-1; 1]:
+	double maxPos = w[0][0];
+	double minNeg = w[0][0];
+
+	for (unsigned inx1 = 0; inx1 < w.size(); inx1++)
+	{
+		for (unsigned inx2 = 0; inx2 < w[inx1].size(); inx2++)
+		{
+			//cout << "Accessing w[" << inx1 << "," << inx2 << "] = " << w[inx1][inx2] << endl;
+			if (w[inx1][inx2] < minNeg) { minNeg = w[inx1][inx2]; }//cout << "Saving minNeg = " << w[inx1][inx2] << endl; }
+			if (w[inx1][inx2] > maxPos) { maxPos = w[inx1][inx2]; }//cout << "Saving maxPos = " << w[inx1][inx2] << endl;
+		
+		}
+		//cout << "maxPos = " << maxPos << ", minNeg = " << minNeg << endl;
+	}
+	double absMax;
+	if (maxPos > abs(minNeg)) { absMax = maxPos; }
+	else { absMax = abs(minNeg); }
+
+
 	// populate the wIJ matrix
+	//cout << "wIJ = " << endl;
 	for (unsigned i = 0; i < w[0].size(); i++)
 	{
 		for (int j = 0; j < num_input; j++)
 		{
+#ifdef WTS_NORM
+			double normVal;
+			if (w[j][i]>0) { normVal = w[j][i] / maxPos; }
+			else { normVal = w[j][i] / abs(minNeg); }
+			//cout << " w[" << j << ", " << i << "] = " << w[j][i] << ", norm_w[" << j << ", " << i << "] = " << normVal << "; ";
+			//t
+			temp_row.push_back(normVal);
+#else
 			temp_row.push_back(w[j][i]);
+#endif
 		}
-
+		//cout << endl;
 		wIJ.push_back(temp_row);
 		temp_row.clear();
 	}
+	
 	//populate the wJK matrix
+	//cout << "wJK = " << endl;
 	for (int j = 0; j < num_output; j++)
 	{
 		for (int i = num_input; i < num_hidden + num_input; i++)
 		{
+#ifdef WTS_NORM
+			double normVal;
+			if (w[i][j]>0) { normVal = w[i][j] / maxPos; }
+			else { normVal = w[i][j] / abs(minNeg); }
+			//cout << " w[" << i << ", " << j << "] = " << w[i][j] << ", norm_w[" << i << ", " << j << "] = " << normVal << "; ";
+			//temp_row.push_back(w[i][j]);
+			temp_row.push_back(normVal);
+#else
 			temp_row.push_back(w[i][j]);
+#endif
 		}
+		//cout << endl;
 		wJK.push_back(temp_row);
 		temp_row.clear();
+		//getchar();
 	}
 	// Separate the array with neuronal values to layers to be processed separately and then stored in the original vector:
 	vector<double> input = neuron_vals.at(0);
@@ -965,10 +1166,10 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 	for (int i = 0; i < num_hidden; i++) { hidden_sensors.push_back(0); }
 	for (int i = 0; i < num_output; i++) { output_sensors.push_back(0); }
 
-#ifdef NEURON
-	//internal counter for tempHist:
-	int counter = 0;
-#endif
+	// pad misc values due to use of CPG:
+	input_bias.push_back(bias_val);
+	hidden_sensors.push_back(0.);
+	gain[0].push_back(gain_val);
 
 	//Main cycle of neuronal values calculation
 	// Updates all neuronal values for allotted time "neural step" using step size "h": 
@@ -979,74 +1180,267 @@ vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double t
 			// Here, weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
 			// but since the zero layer has only zeros, weights don't matter. Similarly, gains are for calculating the 
 			// summed influence of all neurons from previous layer, and thus gains are parsed from the previous layer:
-			input.at(i) += h * updateNeuron(tau, zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
-		}
+#ifdef EV_TAU
+			input.at(i) = input.at(i) + h * updateNeuron(tau[0][i], zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
+#else
+#ifdef TAU_SWITCH
+			//cout << "Input neuron #" << i << ", using tau[0][" << i << "] = " << tau[0][i] << endl;
+			input.at(i) = input.at(i) + h * updateNeuron(tau[0][i], zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
+#else
+			input.at(i) = input.at(i) + h * updateNeuron(tau[0], zeros, input.at(i), wIJ[i], zeros, touches.at(i), gain.at(0));
+#endif
+#endif
 
+		}
+		vector<double> currHidden = hidden;
 		//Cycle to go through all hidden nerons
 		for (unsigned i = 0; i < neuron_vals.at(1).size(); i++)
 		{
-			hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), hidden.at(i), wIJ.at(i), input_bias, hidden_sensors.at(i), gain.at(0));
+			//pad input layer with current states of hidden neurons:
+			vector<double> inputLayer = input;
+			// pad weight matrix with -1 weights:
+			vector<double> wIJpadded = wIJ[i];
+#ifdef CPG
+			inputLayer.push_back(currHidden[(int)cos(M_PI_2*i)]);// add current state of the other hidden neuron
+			
+#ifdef WTS_NORM
+			wIJpadded.push_back(-1.0);	
+#else
+			wIJpadded.push_back(-absMax);
+#endif
+#else
+			wIJpadded.push_back(0.0);
+#endif
+			//cout << "EULER. Int. tick #" << t << ", hidden neur[" << i << "] = " << hidden.at(i) << " BEFORE" << endl;
+#ifdef EV_TAU
+			hidden.at(i) = hidden.at(i) + h * updateNeuron(tau[1][i], inputLayer, hidden.at(i), wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#else
+#ifdef TAU_SWITCH
+			//cout << "Hidden neuron #" << i << ", using tau[1][" << i << "] = " << tau[1][i] << endl;
+			hidden.at(i) = hidden.at(i) + h * updateNeuron(tau[1][i], inputLayer, hidden.at(i), wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#else
+			//hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), hidden.at(i), wIJ.at(i), input_bias, hidden_sensors.at(i), gain.at(0));
+			hidden.at(i) = hidden.at(i) + h * updateNeuron(tau[1], inputLayer, hidden.at(i), wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#endif
+#endif
+			//cout << "EULER. Int. tick #" << t << ", hidden neur[" << i << "] = " << hidden.at(i) << " AFTER" << endl;
 		}
-		
 		//Cycle to go through all output nerons
 		for (unsigned i = 0; i < neuron_vals.at(2).size(); i++)
 		{
-			output.at(i) += h * updateNeuron(tau, neuron_vals.at(1), output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
-		}
-
-#ifdef NEURON
-		// store current neuronal values for printing:
-		for (int layer = 0; layer < 3; layer++)
-		{
-			for (unsigned neuron = 0; neuron < neuron_vals.at(layer).size(); neuron++)
-			{
-				switch (layer) {
-				case(0) : {tempHist[layer][neuron][counter] = input[neuron];  break; }
-				case(1) : {tempHist[layer][neuron][counter] = hidden[neuron]; break; }
-				case(2) : {tempHist[layer][neuron][counter] = output[neuron]; break; }
-				}
-			}
-		}
-		//update tempHist counter:
-		counter++; tsCounter++;
+#ifdef EV_TAU
+			output.at(i) += h * updateNeuron(tau[2][i], hidden, output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+#else
+#ifdef TAU_SWITCH
+			//cout << "Output neuron #" << i << ", using tau[2][" << i << "] = " << tau[2][i] << endl;
+			output.at(i) = output.at(i) + h * updateNeuron(tau[2][i], hidden, output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+#else
+			output.at(i) += h * updateNeuron(tau[2], hidden, output.at(i), wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
 #endif
+#endif
+		}
 	}//End MAIN cycle (through time)
 
 	//update neuronal values:
 	neuron_vals.clear(); neuron_vals.push_back(input); neuron_vals.push_back(hidden); neuron_vals.push_back(output);
+	return neuron_vals;
+}
 
-#ifdef NEURON
-	//store neuron vals in a file (VERYYYY SLOW):
-	for (int layer = 0; layer < 3; layer++)
+#ifdef EV_TAU
+vector<vector<vector<double>>> RagdollDemo::eulerEXPORT(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#else
+#ifdef TAU_SWITCH
+// (update function, initial value, time1, time2, step size, time constant)
+//vector<vector<double>> RagdollDemo::euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+vector<vector<vector<double>>> RagdollDemo::eulerEXPORT(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#else
+vector<vector<vector<double>>> RagdollDemo::eulerEXPORT(double neural_step, double h, vector<double> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain)
+#endif
+#endif
+{
+	// create an inner 3d vector for internal states:
+	vector<vector<vector<double>>> intNeuronVals;
+	for (int i = 0; i < (neural_step / h + 1); i++)
 	{
-		for (unsigned neuron = 0; neuron < neuron_val.at(layer).size(); neuron++)
+		intNeuronVals.push_back(vector<vector<double>>());
+		for (int j = 0; j < 3; j++)
 		{
-			string fileName;
-			switch (layer)
+			intNeuronVals[i].push_back(vector<double>());
+			for (int k = 0; k < neuron_val[j].size(); k++)
 			{
-			case 0:
-			{
-				fileName = "input" + to_string(neuron + 1) + ".txt";
-				break;
+				intNeuronVals[i][j].push_back(double());
 			}
-			case 1:
-			{
-				fileName = "hidden" + to_string(neuron + 1) + ".txt";
-				break;
-			}
-			case 2:
-			{
-				fileName = "output" + to_string(neuron + 1) + ".txt";
-				break;
-			}
-			}
-			//cout << "Saving layer " << layer << " and neuron " << neuron << endl;
-			m_ragdolls[0]->save_1dfileN(tempHist[layer][neuron], fileName,(tsCounter+1-(neural_step/h))); //-> to be used if only end of simulation fitness is reported
 		}
 	}
-#endif
+	//copy the inputted neuronal states into the first time step:
+	for (int j = 0; j < 3; j++)
+	{
+		for (int k = 0; k < neuron_val[j].size(); k++)
+		{
+			intNeuronVals[0][j][k] = neuron_val[j][k];
+			//cout << "Using " << neuron_val[j][k] << " as 0-th value for intNeuronVals[" << j << "][" << k << "]" << endl;
+		}
+	}
 
-	return neuron_vals;
+	// Separate weight matrices:
+	vector<double> temp_row;
+	vector<vector<double>> wIJ, wJK;
+
+	//find the max positive value and min negative value to cale weight matrix to [-1; 1]:
+	double maxPos = w[0][0];
+	double minNeg = w[0][0];
+
+	for (unsigned inx1 = 0; inx1 < w.size(); inx1++)
+	{
+		for (unsigned inx2 = 0; inx2 < w[inx1].size(); inx2++)
+		{
+			//cout << "Accessing w[" << inx1 << "," << inx2 << "] = " << w[inx1][inx2] << endl;
+			if (w[inx1][inx2] < minNeg) { minNeg = w[inx1][inx2]; }//cout << "Saving minNeg = " << w[inx1][inx2] << endl; }
+			if (w[inx1][inx2] > maxPos) { maxPos = w[inx1][inx2]; }//cout << "Saving maxPos = " << w[inx1][inx2] << endl;
+
+		}
+	}
+	double absMax;
+	if (maxPos > abs(minNeg)) { absMax = maxPos; }
+	else { absMax = abs(minNeg); }
+
+
+	// populate the wIJ matrix
+	for (unsigned i = 0; i < w[0].size(); i++)
+	{
+		for (int j = 0; j < num_input; j++)
+		{
+#ifdef WTS_NORM
+			double normVal;
+			if (w[j][i] > 0) { normVal = w[j][i] / maxPos; }
+			else { normVal = w[j][i] / abs(minNeg); }
+			//cout << " w[" << j << ", " << i << "] = " << w[j][i] << ", norm_w[" << j << ", " << i << "] = " << normVal << "; ";
+			//t
+			temp_row.push_back(normVal);
+#else
+			temp_row.push_back(w[j][i]);
+#endif
+		}
+		//cout << endl;
+		wIJ.push_back(temp_row);
+		temp_row.clear();
+	}
+
+	//populate the wJK matrix
+	for (int j = 0; j < num_output; j++)
+	{
+		for (int i = num_input; i < num_hidden + num_input; i++)
+		{
+#ifdef WTS_NORM
+			double normVal;
+			if (w[i][j] > 0) { normVal = w[i][j] / maxPos; }
+			else { normVal = w[i][j] / abs(minNeg); }
+			//cout << " w[" << i << ", " << j << "] = " << w[i][j] << ", norm_w[" << i << ", " << j << "] = " << normVal << "; ";
+			//temp_row.push_back(w[i][j]);
+			temp_row.push_back(normVal);
+#else
+			temp_row.push_back(w[i][j]);
+#endif
+		}
+		wJK.push_back(temp_row);
+		temp_row.clear();
+	}
+
+	// Separate the array with bias values to layers to be processed separately:
+	vector<double> input_bias = bias.at(0);
+	vector<double> hidden_bias = bias.at(1);
+	vector<double> output_bias = bias.at(2);
+
+	// Separate the array with gain values to layers to be processed separately:
+	vector<double> input_gain = gain.at(0);
+	vector<double> hidden_gain = gain.at(1);
+	vector<double> output_gain = gain.at(2);
+
+	// create zero array the size of input layer to substitute for non-existent previous layer, 
+	//can be modified to use feedback connections from hidden and output layers:
+	vector<double> zeros = { 0.,0. };
+
+	//create zero vectors to put for absent sensor values for hidden and output layers calculations:
+	vector<double> hidden_sensors;
+	vector<double> output_sensors;
+
+	//populate sensor vectors for hid/out layers with zeros (don't receive sensor inputs):
+	for (int i = 0; i < num_hidden; i++) { hidden_sensors.push_back(0); }
+	for (int i = 0; i < num_output; i++) { output_sensors.push_back(0); }
+
+	//Main cycle of neuronal values calculation
+	// Updates all neuronal values for allotted time "neural step" using step size "h": 
+
+	// pad misc values due to use of CPG connections:
+	input_bias.push_back(bias_val);
+	hidden_sensors.push_back(0.);
+	for (int t = 1; t < (neural_step / h + 1); t++)
+	{
+		for (unsigned i = 0; i < neuron_vals.at(0).size(); i++)
+		{
+			// Here, weight matrix wIJ is used (which is wrong, since there are no weights from zero fictional layer)
+			// but since the zero layer has only zeros, weights don't matter. Similarly, gains are for calculating the 
+			// summed influence of all neurons from previous layer, and thus gains are parsed from the previous layer:
+#ifdef EV_TAU
+			intNeuronVals[t][0][i] = intNeuronVals[t - 1][0][i] + h * updateNeuron(tau[0][i], zeros, intNeuronVals[t - 1][0][i], wIJ[i], zeros, touches.at(i), gain.at(0));
+#else
+#ifdef TAU_SWITCH
+			intNeuronVals[t][0][i] = intNeuronVals[t - 1][0][i] + h * updateNeuron(tau[0][i], zeros, intNeuronVals[t - 1][0][i], wIJ[i], zeros, touches.at(i), gain.at(0));
+#else
+			intNeuronVals[t][0][i] = intNeuronVals[t - 1][0][i] + h * updateNeuron(tau[0], zeros, intNeuronVals[t - 1][0][i], wIJ[i], zeros, touches.at(i), gain.at(0));
+#endif
+#endif
+		}
+		vector<double> currHidden = intNeuronVals[t-1][1];
+		//Cycle to go through all hidden nerons
+		for (unsigned i = 0; i < neuron_vals.at(1).size(); i++)
+		{
+			//pad input layer with current states of hidden neurons:
+			vector<double> inputLayer = intNeuronVals[t][0];
+			vector<double> wIJpadded = wIJ[i];
+#ifdef CPG
+			inputLayer.push_back(currHidden[(int)cos(M_PI_2*i)]);// add current state of the other hidden neuron
+#ifdef WTS_NORM
+			wIJpadded.push_back(-1.0);// pad weight matrix with -1 weights:
+#else
+			wIJpadded.push_back(-absMax);
+#endif
+#else
+			wIJpadded.push_back(0.0);
+#endif
+			gain[0].push_back(gain_val);
+#ifdef EV_TAU
+			intNeuronVals[t][1][i] = intNeuronVals[t - 1][1][i] + h * updateNeuron(tau[1][i], inputLayer, intNeuronVals[t - 1][1][i], wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#else
+#ifdef TAU_SWITCH
+			intNeuronVals[t][1][i] = intNeuronVals[t - 1][1][i] + h * updateNeuron(tau[1][i], inputLayer, intNeuronVals[t - 1][1][i], wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#else
+			//hidden.at(i) += h * updateNeuron(tau, neuron_vals.at(0), hidden.at(i), wIJ.at(i), input_bias, hidden_sensors.at(i), gain.at(0));
+			intNeuronVals[t][1][i] = intNeuronVals[t - 1][1][i] + h * updateNeuron(tau[1], inputLayer, intNeuronVals[t - 1][1][i], wIJpadded, input_bias, hidden_sensors.at(i), gain.at(0));
+#endif
+#endif
+		}
+		//Cycle to go through all output nerons
+		for (unsigned i = 0; i < neuron_vals.at(2).size(); i++)
+		{
+#ifdef EV_TAU
+			intNeuronVals[t][2][i] = intNeuronVals[t - 1][2][i] + h * updateNeuron(tau[2][i], intNeuronVals[t][1], intNeuronVals[t - 1][2][i], wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+#else
+#ifdef TAU_SWITCH
+			intNeuronVals[t][2][i] = intNeuronVals[t - 1][2][i] + h * updateNeuron(tau[2][i], intNeuronVals[t][1], intNeuronVals[t - 1][2][i], wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+#else
+			intNeuronVals[t][2][i] = intNeuronVals[t - 1][2][i] + h * updateNeuron(tau[2], intNeuronVals[t][1], intNeuronVals[t - 1][2][i], wJK.at(i), hidden_bias, output_sensors.at(i), gain.at(1));
+#endif
+#endif
+		}
+		//		cout << "=========END OUTPUT================" << endl;
+		//		cout << "Finished int.tick #" << t << endl;
+		//		getchar();
+	}//End MAIN cycle (through time)
+	
+	//erase the 1st member of the vector (previous neuronal values)
+	intNeuronVals.erase(intNeuronVals.begin());
+	return intNeuronVals;
 }
 
 // function to update a single neuron according to CTRNN formula
@@ -1064,6 +1458,27 @@ double RagdollDemo::updateNeuron(double tau, vector<double> previous_layer, doub
 	fcn_val = (-current_neuron + sensor_val + sum_inputs)*(1 / tau);
 	return fcn_val;
 }
+
+double RagdollDemo::updateNeuronDEBUG(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain)
+{
+	//var to store all of the summed input to the neuron:	
+	double sum_inputs = 0;
+	double fcn_val;
+	cout << "---------INSIDE UPDATE NEURON------------" << endl;
+	cout << "tau = " << tau << ", previous layer size " << previous_layer.size();
+	//cycle through all neurons of previous layer:
+	for (unsigned j = 0; j < previous_layer.size(); j++)
+	{
+		cout << "w[" << j << "] = " << w[j] << " * tanh[prev.layer[" << j << "] = " << previous_layer.at(j) << " + bias_val[" << j << "] = " << bias_val[j] << ")*gain[" << j << "] = " << gain[j] << "]) = " << tanh((previous_layer.at(j) + bias_val[j]) * gain.at(j)) * w[j] << endl;
+		sum_inputs += w[j] * tanh((previous_layer.at(j) + bias_val[j]) * gain.at(j));
+		cout << "sum_inputs = " << sum_inputs << endl;
+	}
+	//update neuron's state
+	fcn_val = (-current_neuron + sensor_val + sum_inputs)*(1 / tau);
+	cout << "fcn_val = [( -current_neuron = " << -current_neuron << " + sensor val = " << sensor_val << " + sum_inputs = " << sum_inputs << ")*(1/tau) = " << (1 / tau) << "] = " << fcn_val << endl;
+	//	cout << "Result = " << fcn_val << endl;
+	return fcn_val;
+}
 //END CTRNN CODE:
 //========================================================================================================
 
@@ -1076,9 +1491,12 @@ void RagdollDemo::initPhysics()
 	gContactProcessedCallback = myContactProcessedCallback; //Registers the collision
 	SimulationStep = 0; //time step counter to exit after desired # of steps
 	tempFitness = 0;
- 
-#ifdef NEURON
-	tsCounter = 0;
+#ifndef EV_TAU
+#ifndef TAU_SWITCH
+	tau.push_back(INPUT_TAU); 
+	tau.push_back(HIDDEN_TAU);
+	tau.push_back(OUTPUT_TAU);
+#endif
 #endif
 
 #ifdef TRAIN
@@ -1088,25 +1506,17 @@ void RagdollDemo::initPhysics()
 #endif
 	oneStep = false;
 
+//Override pause setting if it's a COM file:
+#ifdef COM
+	pause = false;
+#endif
+
 //---- intializing bodypart IDs
-#ifdef TORSO
-	for (int i = 0; i < 8; i++)
+	for (int i = 0; i < BODYPART_COUNT+1; i++)
 	{
 		IDs[i] = i;
 	};
-#else
-#ifndef KNEES
-	for (int i = 0; i < 7; i++)
-	{
-		IDs[i] = i;
-	};
-#else
-	for (int i = 0; i < 9; i++)
-	{
-		IDs[i] = i;
-	};
-#endif
-#endif
+
 	// initalize neuron_val, bias and gains(if inside ClienMoveandDisplay - they are reset to 0's each simulation step): 
 	for (int i = 0; i < num_input; i++) { temp_row.push_back(0); temp_bias_row.push_back(bias_val); temp_gain_row.push_back(gain_val); }
 
@@ -1125,6 +1535,25 @@ void RagdollDemo::initPhysics()
 	bias.push_back(temp_bias_row); temp_bias_row.clear();
 	gain.push_back(temp_gain_row); temp_gain_row.clear();
 
+//if there is need for extracting neuronal states:
+#ifdef NEURON
+
+	//intialize 3d [timeStep X layer X neuron] vector for neuron states:
+	for (int i = 0; i < (maxStep * (neural_step / h)); i++)
+	{
+		neuronHist.push_back(vector<vector<double>>());
+		for (int j = 0; j < 3; j++)
+		{
+			neuronHist[i].push_back(vector<double>());
+			for (int k = 0; k < neuron_val[j].size(); k++)
+			{
+				neuronHist[i][j].push_back(double());
+			}
+		}
+	}
+	cout << "neuronHist [ " << neuronHist.size() << " , " << neuronHist[0].size() << " , " << neuronHist[0][0].size() << " - " << neuronHist[0][1].size() << " - " << neuronHist[0][2].size() << "]" << endl;
+#endif
+
 #ifdef JOINT
 	//intialize 2d vector for joint angles:
 	for (int i = 0; i < num_output; i++)
@@ -1138,26 +1567,41 @@ void RagdollDemo::initPhysics()
 #endif
 
 #ifdef COM
-	//intialize 2d vector for COM coordinates:
-	for (int i = 0; i < 3; i++)
+	//intialize 2d vector for joint angls and forces [number of joints X number of time steps]:
+	for (int i = 0; i < num_output; i++)
 	{
-		COMpath.push_back(vector<double>());
+		jointAngs.push_back(vector<double>());
+		jointForces.push_back(vector<double>());
 		for (int j = 0; j < maxStep; j++)
 		{
-			COMpath[i].push_back(double());
+			jointAngs[i].push_back(double());
+			jointForces[i].push_back(double());
 		}
 	}
-#endif
-	//init force vectors:
+	//cout << "Sizeof(jointForces) = " << sizeof(jointForces) << ", sizeof(jointForces[0]) = " << sizeof(jointForces[0]) << endl;
+	//init COM, feet forces, swing foot touch sensor, and swing foot COM position vectors:
 	for (int j = 0; j < maxStep; j++)
 	{
+		COMpath.push_back(btVector3());
 		leftFootForce.push_back(btVector3());
 		rightFootForce.push_back(btVector3());
+		swingFootTouch.push_back(int());
+		swingFootCOMtrace.push_back(btVector3());
 	}
+
+#endif
+
 
 	//READ WEIGHTS:
 	// from input file into var called 'w': 
 	load_data(m_inputFileName, w);
+#ifdef EV_TAU
+	load_data(m_inputTauFileName, tau);
+#endif
+
+#ifdef TAU_SWITCH
+	load_data(m_inputTauFileName, tau);
+#endif
 
 //END ADDED
 
@@ -1255,11 +1699,12 @@ void RagdollDemo::clientMoveAndDisplay()
 	//graphics ON/OFF versions of the robot. Actuation timestep is 5 * 1/60 of a second, as it removes movement jitter.
 
 	//!!!!look into best values for these vars:
-	neural_step = 1;
-	h = 0.1;
+	//neural_step = 1;
+	//h = 0.05;
 
-	//Add actuation time step: 
-	float ActuateTimeStep = 5*(1.f/60.f);
+	//Time steps:
+	float timeStep = 1.0f / 60.0f;
+	float ActuateTimeStep = 5*timeStep;
 
 	if (m_dynamicsWorld)
 	{		
@@ -1267,15 +1712,16 @@ void RagdollDemo::clientMoveAndDisplay()
 		{
 			for (int l = 0; l < TICKS_PER_DISPLAY; l++)
 			{
+				//cout << "Step: " << SimulationStep << endl;
 				//Intiation of the touches
 				for (int i = 0; i < bodyCount; i++)
 				{
 					touches[i] = 0;
-					forces[i] = btVector3(0,0,0);
+					forces[i] = btVector3(0, 0, 0);
 				}
 				//Making sure all the body parts are active every time step:
 				//Body parts change color when inactive for sometime:
-				for (int k = 0; k< bodyCount; k++)
+				for (int k = 0; k < bodyCount; k++)
 				{
 					m_ragdolls[0]->m_bodies[k]->setActivationState(ACTIVE_TAG);
 				}
@@ -1288,16 +1734,35 @@ void RagdollDemo::clientMoveAndDisplay()
 					}
 				}
 
+#ifdef NEURON
+				vector<vector<vector<double>>> temp3Darray;
+				temp3Darray = eulerEXPORT(neural_step, h, tau, w, neuron_val, bias, sensor_val, gain);
+
+				for (int step = 0; step < (neural_step / h); step++)
+				{
+					//cout << "Sim. step = " << SimulationStep << ", int.neuronal tick = " << step << endl;
+					for (int layr = 0; layr < neuronHist[0].size(); layr++)
+					{
+						//cout << "neuronHist. Layer " << layr << ": ";
+						for (int nrn = 0; nrn < neuronHist[0][layr].size(); nrn++)
+						{
+							neuronHist[SimulationStep*(neural_step / h) + step][layr][nrn] = temp3Darray[step][layr][nrn];
+							//cout << "neuronHist["<<(SimulationStep*(neural_step / h) + step)<<"]["<<layr<<"]["<<nrn<<"] = "<< (neuronHist[SimulationStep*(neural_step / h) + step][layr][nrn]) <<"  = temp3Darray["<<step<<"]["<<layr<<"]["<<nrn<<"] = " << temp3Darray[step][layr][nrn] << endl;
+						}
+						//cout << endl;
+					}
+				}
+#endif
 				//update neronal states:
 				neuron_val = euler(neural_step, h, tau, w, neuron_val, bias, sensor_val, gain);
-				
+
 				//extract values from output layer:
 				targ_angs = neuron_val.at(2);
 
 				// for all motors
-				for (int i = 0; i<num_output; i++)
+				for (int i = 0; i < num_output; i++)
 				{
-					double targetAngle = tanh(targ_angs.at(i));
+					double targetAngle = tanh((targ_angs.at(i) + bias[2][i]) * gain[2][i]);
 					//activityIndex += abs(targetAngle); // <- simplified version. Should be: targetAngle / [range of all possible values for targetAngle]
 					// but since [range] = 2, or 1 on each side (it's symmetrical), then it is just targetAngle. The larger the angle, the higher the activity index. 
 					// check which motor is to be actuated (values are scaled to the desired angle)
@@ -1306,9 +1771,9 @@ void RagdollDemo::clientMoveAndDisplay()
 					{
 					case 0: //Left Hip ML
 					{
-						targetAngle = ((HIP_ML_H - HIP_ML_L)/2) * targetAngle + ((HIP_ML_H + HIP_ML_L) / 2); //HIP_ML [-38.8; 30.5]
+						targetAngle = ((HIP_ML_H - HIP_ML_L) / 2) * targetAngle + ((HIP_ML_H + HIP_ML_L) / 2); //HIP_ML [-38.8; 30.5]
 						//cout << "Sending target angle = " << targetAngle * 180 / M_PI << " to " << i << "-th motor that has limits [" << HIP_ML_L * 180 / M_PI << "," << HIP_ML_H * 180 / M_PI << "]" << endl;
-						
+
 						break;
 					}
 					case 1: //Left Hip AP
@@ -1386,42 +1851,50 @@ void RagdollDemo::clientMoveAndDisplay()
 					default:
 						break;
 					}
-					
-					m_ragdolls[0]->ActuateJoint(i / 2, abs(sin(i*M_PI / 2))+1, targetAngle, ActuateTimeStep);
 
+					m_ragdolls[0]->ActuateJoint(i / 2, abs(sin(i*M_PI / 2)) + 1, targetAngle, ActuateTimeStep);
+					//double currAng = m_ragdolls[0]->m_joints[i / 2]->getRotationalLimitMotor(abs(sin(i*M_PI / 2)) + 1)->m_currentPosition;
+					//cout << "SS: " << SimulationStep << ", J# " << (int)i / 2 << ", M#" << abs(sin(i*M_PI / 2)) + 1 << ". Current pos(deg) = " << currAng * 180 / M_PI << ". Target given = " << targetAngle * 180 / M_PI << endl;
 
-					
 				}
 				// END UPDATE MOTORS
 
-				m_dynamicsWorld->stepSimulation(1.f / 60.f,0);
+				m_dynamicsWorld->stepSimulation(timeStep, 0);
 
+				//cout << "World was updated. New joint values!" << endl;
+#ifdef COM
+				btVector3 axisInA(0, 1, 0);
+				btScalar appliedImpulse;
+				for (int i = 0; i < num_output; i++)
+				{
+					jointAngs[i][SimulationStep] = m_ragdolls[0]->m_joints[i / 2]->getRotationalLimitMotor(abs(sin(i*M_PI / 2)) + 1)->m_currentPosition * 180 / M_PI;
+					//jointForces[i][SimulationStep] = m_ragdolls[0]->m_joints[i / 2]->getRotationalLimitMotor(abs(sin(i*M_PI / 2)) + 1)->m_accumulatedImpulse / (1.f / 60.f);
+					//jointForces[i][SimulationStep] = m_ragdolls[0]->m_joints[i / 2]->getAppliedImpulse() / (1.f / 60.f);
+
+
+					appliedImpulse = m_ragdolls[0]->m_joints[i / 2]->getJointFeedback()->m_appliedTorqueBodyA.dot(axisInA);
+					jointForces[i][SimulationStep] = appliedImpulse / (1.f / 60.f);
+					double currAng = m_ragdolls[0]->m_joints[i / 2]->getRotationalLimitMotor(abs(sin(i*M_PI / 2)) + 1)->m_currentPosition;
+					//cout << "SimStep: " << SimulationStep << ", joint num " << (int)i / 2 << ", motor num " << abs(sin(i*M_PI / 2)) + 1 << ". Current pos(deg) = " << currAng * 180 / M_PI << endl;
+					COMpath[SimulationStep] = m_ragdolls[0]->wholeBodyCOM();
+					leftFootForce[SimulationStep] = forces[BODYPART_LEFT_FOOT];
+					rightFootForce[SimulationStep] = forces[BODYPART_RIGHT_FOOT];
+					swingFootTouch[SimulationStep] = touches[BODYPART_LEFT_FOOT];
+					swingFootCOMtrace[SimulationStep] = m_ragdolls[0]->getCOMposition(BODYPART_LEFT_FOOT);
+			    }
+#endif 
+
+				//cout << "Back to inside values" << endl;
+
+#ifndef COM
+#ifndef NEURON
 				// Check if robot is still upright:
-				m_ragdolls[0]->isUpright(tempFitness, SimulationStep);
+				m_ragdolls[0]->isUpright(tempFitness, maxStep, SimulationStep);
+#endif
+#endif
 				//if check is passed, continue the simulation and fitness calculation:;
 				tempFitness += m_ragdolls[0]->onlineFitness(SimulationStep, maxStep);
-				
 
-#ifdef COM // now for both COM and COP
-				//for (int i = 0; i < bodyCount; i++)
-				//{
-				//	printf("Force on body %d is (%f,%f,%f) \n", i, forces[i].x(), forces[i].y(), forces[i].z());
-				//}
-				leftFootForce[SimulationStep] = forces[BODYPART_LEFT_FOOT];
-				rightFootForce[SimulationStep] = forces[BODYPART_RIGHT_FOOT];
-				btVector3 thisCOM = m_ragdolls[0]->wholeBodyCOM();
-				COMpath[0][SimulationStep] = thisCOM.x();
-				COMpath[1][SimulationStep] = thisCOM.y();
-				COMpath[2][SimulationStep] = thisCOM.z();
-				//cout << "COM.x = " << thisCOM.x() << ", COM.y = " << thisCOM.y() << ", COM.z = " << thisCOM.z() << endl;
-				// An attempt to also draw a sphere where COM belongs
-				//virtual void renderCOM()
-				//{
-				//	extern GLDebugDrawer gDebugDrawer;
-				//	GlutDemoApplication::renderCOM();
-				//	gDebugDrawer.drawSphere(thisCOM, 10.0, btVector3(0.75, 0.75, 0.));
-				//}
-#endif
 
 #ifdef JOINT
 				//store joint angles for exporting:
@@ -1437,58 +1910,73 @@ void RagdollDemo::clientMoveAndDisplay()
 				for (int j = 0; j < num_input; j++)
 				{
 					sensor_val.push_back(touches[(BODYPART_LEFT_FOOT + j)]);
+					//cout << "Sensor val " << j << " from body #" << BODYPART_LEFT_FOOT + j << " = " << touches[(BODYPART_LEFT_FOOT + j)] << endl;
 				}
-
+				
 				// Increase the simulation time step counter:
+				
 				SimulationStep++;
+#ifdef TAU_SWITCH
+				if (SimulationStep == (maxStep / 2))
+				{
+					tau = flipTau(tau);
+				}
+#endif
 
 #ifndef TRAIN //if DEMO!!!
 
 				//Stopping simulation in the end of time for DEMO robots (paused right before the end)
 				if (SimulationStep >= maxStep)
 				{
-					double fitval = tempFitness/SimulationStep;
-					cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
-
-					ofstream outputFileLeft, outputFileRight;
-					outputFileLeft.open("leftFootForce.txt", ios_base::app);
-					outputFileRight.open("rightFootForce.txt", ios_base::app);
-					for (int m = 0; m < SimulationStep; m++)
-					{
-						outputFileLeft << leftFootForce[m].x() << " " << leftFootForce[m].y() << " " << leftFootForce[m].z() << endl;
-						outputFileRight << rightFootForce[m].x() << " " << rightFootForce[m].y() << " " << rightFootForce[m].z() << endl;
-					}
-					outputFileLeft.close();
-					outputFileRight.close();
 #ifdef COM
-					ofstream COMoutputFile;
-					COMoutputFile.open("com.txt", ios_base::app);
-					for (int m = 0; m < SimulationStep; m++)
-					{
-						COMoutputFile << COMpath[0][m]<< " " << COMpath[1][m] << " " << COMpath[2][m] << endl;
-					}
-					COMoutputFile.close();
+					cout << "Simstep = " << SimulationStep << endl;
+					m_ragdolls[0]->save_1DbtV3(leftFootForce, "leftFootForce.txt");
+					m_ragdolls[0]->save_1DbtV3(rightFootForce, "rightFootForce.txt");
+					m_ragdolls[0]->save_1DbtV3(COMpath, "com.txt");
+					m_ragdolls[0]->save_1DInt(swingFootTouch, "swingFootTouch.txt");
+					m_ragdolls[0]->save_1DbtV3(swingFootCOMtrace, "swingFootCOMtrace.txt");
+					m_ragdolls[0]->save_2DDbl(jointAngs, "jointAngs.txt");
+					m_ragdolls[0]->save_2DDbl(jointForces, "jointForces.txt");
 
-					// Store target locations for plotting
-					ofstream TargOutputFile;
-					TargOutputFile.open("targets.txt", ios_base::app);
+					vector<btVector3> targsPos;
+					targsPos.push_back(btVector3()); targsPos.push_back(btVector3());
+					targsPos = m_ragdolls[0]->getTargPos();
+					m_ragdolls[0]->save_1DbtV3(targsPos, "targets.txt");
 
-					btVector3 leftTargPos = m_ragdolls[0]->getLeftTargPos();
-					btVector3 rightTargPos = m_ragdolls[0]->getRightTargPos();
+#else
 
-					TargOutputFile << leftTargPos.x() << " " << leftTargPos.y() << " " << leftTargPos.z() << endl;
-					TargOutputFile << rightTargPos.x() << " " << rightTargPos.y() << " " << rightTargPos.z() << endl;
-
-					TargOutputFile.close();
-
-#endif
+					//double fitval = tempFitness / SimulationStep;
+					double fitval = tempFitness;
+					cout << "SimStep: " << SimulationStep << ", C++ fitness: " << fitval << endl;
 					getchar();
+					
+#endif
+#ifdef NEURON
+					//transform 3D to 2D neuronal states vector [time X layer X neuron] -> [time X neuron]
+					vector<vector<double>> outputNeurStates;
+					int layr, neuronCount;
+					for (int t = 0; t < neuronHist.size(); t++)
+					{
+						outputNeurStates.push_back(vector<double>());
+						for (int nrn = 0; nrn < (num_input + num_hidden + num_output); nrn++)
+						{
+							outputNeurStates[t].push_back(double());
+							if (nrn < num_input) { layr = 0; neuronCount = nrn; }
+							if ((nrn < (num_input + num_hidden)) && (nrn >= num_input)) { layr = 1; neuronCount = nrn - num_input; }
+							if (nrn >= (num_input + num_hidden)) { layr = 2; neuronCount = nrn - num_input - num_hidden; }
+							outputNeurStates[t][nrn] = neuronHist[t][layr][neuronCount];
+						}
+					}
+					//export 2d vector:
+					m_ragdolls[0]->save_2DDbl(outputNeurStates, "neuron.txt");
+#endif
 					exit(0);
 				}
 #else // IF TRAIN:
 				if (SimulationStep >= maxStep)
 				{
-					double fitval = tempFitness / SimulationStep;
+					//double fitval = tempFitness / SimulationStep;
+					double fitval = tempFitness;
 					ofstream outputFile;
 					outputFile.open("fit.txt", ios_base::app);
 					outputFile << fitval << endl;
@@ -1511,15 +1999,6 @@ void RagdollDemo::clientMoveAndDisplay()
 		
 		//optional but useful: debug drawing
 		m_dynamicsWorld->debugDrawWorld();
-
-#ifdef NEURON
-		// Atm there are 10 neural steps per each simStep->takes forever to run 1000 simSteps.
-		//stopping simulation
-		if (SimulationStep >= maxStep)
-		{
-			exit(0);
-		}
-#endif
 
 #ifdef JOINT
 		//saving the joint angle values to a file:

@@ -105,9 +105,9 @@ public:
 
 	// "added to the demo":
 #ifdef TRAIN
-	int maxStep = 400;
+	int maxStep = 120;
 #else
-	int maxStep = 400;//this is to debug only, remove in final version.
+	int maxStep = 120;//this is to debug only, remove in final version.
 #endif
 
 #ifdef TORSO
@@ -136,11 +136,17 @@ public:
 	vector<vector<double>> w;
 	// name of the file with weights
 	string m_inputFileName; 
+#ifdef EV_TAU
+	// name of the file with taus:
+	string m_inputTauFileName;
+#endif
+#ifdef TAU_SWITCH
+	// name of the file with taus:
+	string m_inputTauFileName;
+	vector<vector<double>> flipTau(vector<vector<double>> tau);
+#endif
 
 	//CTRNN params:
-	// step size for CTRNN update (should be larger? than the simulation step size, 
-	//so that CTRNN could catch up with environment):
-	double neural_step;
 	// number of input neurons (= number of sensors):
 	int num_input = 2;
 	// number of hidden neurons:
@@ -160,7 +166,7 @@ public:
 #endif
 
 	// all neuronal states or values are held in this vector of vectors:
-	vector<vector<double>> neuron_val;//number of neurons x time
+	vector<vector<double>> neuron_val;//number of layers X number of neurons in this layer
 
 #ifdef JOINT
 	// all neuronal states or values are held in this vector of vectors:
@@ -174,13 +180,25 @@ public:
 	//vector of sensor values:
 	vector<int> sensor_val;
 	// time constant (the same for all neurons, so far; not optimized)
-	double tau = 2;
+	//double tau = 2.0;
+#ifdef EV_TAU
+	vector<vector<double>> tau;
+#else
+#ifdef TAU_SWITCH
+	vector<vector<double>> tau;
+#else
+	vector<double> tau;
+#endif
+#endif
 	// bias value (the same for all neurons, so far; not optimized)
 	double bias_val = 0.001;
 	// gain value (the same for all neurons, so far; not optimized)
 	double gain_val = 1.0;
+	// step size for CTRNN update (should be larger? than the simulation step size, 
+	//so that CTRNN could catch up with environment):
+	double neural_step = 1.0;
 	// integration step size for updating the neuronal states:
-	double h;
+	double h = 0.1;
 	// END CTRNN params
 
 	// neuron_val, bias and gain vectors: 
@@ -189,23 +207,51 @@ public:
 
 	// Declare function that calculates the neuronal state according to the equation within:
 	double updateNeuron(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain);
+	double updateNeuronDEBUG(double tau, vector<double> previous_layer, double current_neuron, vector<double> w, vector<double> bias_val, int sensor_val, vector<double> gain);
 	// (update function, initial value, time1, time2, step size, time constant)
-	vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#ifdef EV_TAU
+	vector<vector<double>> RagdollDemo::euler(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#else
+#ifdef TAU_SWITCH
+	//vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+	vector<vector<double>> euler(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#else
+	vector<vector<double>> RagdollDemo::euler(double neural_step, double h, vector<double> tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#endif
+#endif
+
+#ifdef EV_TAU
+	vector<vector<vector<double>>> RagdollDemo::eulerEXPORT(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#else
+#ifdef TAU_SWITCH
+	//vector<vector<double>> euler(double neural_step, double h, double tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+	vector<vector<vector<double>>> eulerEXPORT(double neural_step, double h, vector<vector<double>> tau, vector<vector<double>> w, vector<vector<double>> neuron_vals, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#else
+	vector<vector<vector<double>>> eulerEXPORT(double neural_step, double h, vector<double> tau, vector<vector<double>> w, vector<vector<double>> neuron_val, vector<vector<double>> bias, vector<int> touches, vector<vector<double>> gain);
+#endif
+#endif
 	// function that reads wts from a file
 	void initParams(const std::string& inputFileName); 
+	void initParams1(const std::string& inputTauFileName);
 
 #ifdef NEURON
 	//Time Step counter for global tracking of neuronal time 
 	//(euler fcn only updates values for "neural_step", export is accumulated internally in euler):
 	int tsCounter;
+	vector<vector<vector<double>>> neuronHist;
 #endif
-
 	// if COM needs to be extracted:
 #ifdef COM
-	vector<vector<double>> COMpath; //rows x, y, z; columns - simulation steps
-#endif
+	vector<btVector3> COMpath; //rows x, y, z; columns - simulation steps
 	vector<btVector3> leftFootForce;
 	vector<btVector3> rightFootForce;
+	vector<btVector3> swingFootCOMtrace;
+	vector<int> swingFootTouch;
+	vector<vector<double>> jointAngs;
+	vector<vector<double>> jointForces;
+	
+#endif
+
 
 	RagdollDemo();
     // end "added to demo"
